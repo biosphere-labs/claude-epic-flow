@@ -193,7 +193,7 @@ fi
 
 ## Implementing Preflight Checks
 
-Commands should include preflight validation at the start. Use `gum confirm` for interactive prompts:
+Commands should include preflight validation at the start. Use `AskUserQuestion` for interactive prompts:
 
 ```bash
 # In command script or markdown instructions
@@ -205,16 +205,11 @@ preflight_check() {
     exit 1
   fi
 
-  # Check recommended steps
+  # Check recommended steps - use AskUserQuestion tool for confirmation
   github=$(grep "^github:" workflow/epics/$NAME/epic.md | sed 's/^github: *//')
   if [ -z "$github" ]; then
-    if command -v gum &> /dev/null; then
-      gum confirm "Epic not synced to GitHub. Continue anyway?" || exit 1
-    else
-      echo "⚠️  Epic not synced to GitHub"
-      read -p "Continue anyway? (y/n) " -n 1 -r
-      [[ ! $REPLY =~ ^[Yy]$ ]] && exit 1
-    fi
+    echo "⚠️  Epic not synced to GitHub"
+    # Use AskUserQuestion tool to confirm continuation
   fi
 }
 ```

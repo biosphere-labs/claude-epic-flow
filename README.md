@@ -156,7 +156,6 @@ Tools and MCP servers used by the workflow:
 |---------|---------|
 | [CCPM](https://github.com/automazeio/ccpm) | Claude Code Project Manager - the original workflow system this evolved from |
 | [Compounding Engineering](https://github.com/EveryInc/every-marketplace/tree/main/plugins/compounding-engineering) | Agent patterns from the Every plugin marketplace |
-| [Episodic Memory MCP](https://github.com/erichung9060/episodic-memory-mcp) | Conversation memory and cross-session search |
 
 ## License
 

@@ -46,10 +46,7 @@ github=$(grep "^github:" workflow/epics/$ARGUMENTS/epic.md 2>/dev/null | sed 's/
 if [ -z "$github" ] || [ "$github" = "none" ]; then
   echo "⚠️  Epic not synced to GitHub - progress won't be tracked online"
   echo "   Optional: Run /pm:epic-sync $ARGUMENTS first"
-  # Use gum confirm if available, otherwise continue with warning
-  if command -v gum &> /dev/null; then
-    gum confirm "Continue without GitHub sync?" || exit 1
-  fi
+  # Use AskUserQuestion to confirm continuation
 fi
 
 # 4. Check for uncommitted changes

@@ -22,14 +22,9 @@ Run end-to-end tests with Playwright. Supports two modes:
 
 ## Mode Selection
 
-If gum is installed, you'll get an interactive mode selector. Otherwise, specify mode via argument.
+Use `AskUserQuestion` for interactive mode selection, or specify mode via argument.
 
 ```bash
-# Interactive (with gum)
-MODE=$(gum choose --header "Select Playwright mode:" \
-  "Attached Chromium (isolated, fast)" \
-  "Google Profile (auth + extensions)")
-
 # Or specify explicitly
 /testing:e2e --mode=chromium
 /testing:e2e --mode=profile
@@ -126,23 +121,23 @@ grep -l "extension\|chrome\|auth\|login\|firebase" frontend/e2e/*.spec.ts
 
 If matches found or user specified `--extension`, use Google Profile mode.
 
-### 2. Interactive Mode Selection (if gum available)
+### 2. Interactive Mode Selection
 
-```bash
-if command -v gum &> /dev/null; then
-  MODE=$(gum choose --header "🎭 Select Playwright mode:" \
-    "Chromium (isolated)" \
-    "Google Profile (auth + extensions)")
+Use `AskUserQuestion` tool to prompt for mode selection:
 
-  case "$MODE" in
-    "Chromium"*) USE_PROFILE=false ;;
-    "Google"*)   USE_PROFILE=true ;;
-  esac
-else
-  # Default to chromium unless --extension specified
-  USE_PROFILE=false
-fi
+```yaml
+AskUserQuestion:
+  questions:
+    - question: "Which Playwright mode should we use?"
+      header: "Test mode"
+      options:
+        - label: "Chromium (isolated)"
+          description: "Standard mode, fast, works in CI"
+        - label: "Google Profile"
+          description: "Uses existing Chrome with auth and extensions"
 ```
+
+Based on response, set `USE_PROFILE=true` for Google Profile mode.
 
 ### 3. Setup for Google Profile Mode
 
@@ -154,19 +149,28 @@ echo ""
 echo "1. Close all Chrome windows"
 echo "2. Run this command to start Chrome with debugging:"
 echo ""
-gum style --border rounded --padding "1 2" \
-  "google-chrome --remote-debugging-port=9222 --user-data-dir=\"\$HOME/.config/google-chrome\""
+echo "   google-chrome --remote-debugging-port=9222 --user-data-dir=\"\$HOME/.config/google-chrome\""
 echo ""
 echo "3. Wait for Chrome to open, then log in if needed"
-echo ""
+```
 
-if command -v gum &> /dev/null; then
-  gum confirm "Chrome is running with debugging port 9222?" || exit 1
-else
-  read -p "Press Enter when Chrome is ready..."
-fi
+Use `AskUserQuestion` to confirm Chrome is ready:
 
-# Verify connection
+```yaml
+AskUserQuestion:
+  questions:
+    - question: "Is Chrome running with debugging port 9222?"
+      header: "Chrome ready"
+      options:
+        - label: "Yes, Chrome is ready"
+          description: "Continue with tests"
+        - label: "No, need to start Chrome"
+          description: "Show setup instructions again"
+```
+
+Then verify connection:
+
+```bash
 curl -s http://localhost:9222/json/version > /dev/null || {
   echo "❌ Cannot connect to Chrome on port 9222"
   echo "   Make sure Chrome is running with --remote-debugging-port=9222"
@@ -195,29 +199,29 @@ fi
 
 ### 5. Handle Failures
 
-If tests fail, offer options:
+If tests fail, use `AskUserQuestion` to offer options:
 
-```bash
-if [ $? -ne 0 ]; then
-  echo ""
-  echo "❌ Some tests failed"
-
-  if command -v gum &> /dev/null; then
-    ACTION=$(gum choose --header "What next?" \
-      "View report (playwright show-report)" \
-      "Debug failing test (--debug)" \
-      "Take screenshot and continue" \
-      "Exit")
-
-    case "$ACTION" in
-      "View"*)   npx playwright show-report ;;
-      "Debug"*)  npx playwright test --debug $FAILED_TEST ;;
-      "Take"*)   # Use MCP to take screenshot ;;
-      "Exit")    exit 1 ;;
-    esac
-  fi
-fi
+```yaml
+AskUserQuestion:
+  questions:
+    - question: "Some tests failed. What would you like to do?"
+      header: "Next step"
+      options:
+        - label: "View report"
+          description: "Open Playwright HTML report"
+        - label: "Debug failing test"
+          description: "Re-run with --debug flag"
+        - label: "Take screenshot"
+          description: "Capture current state and continue"
+        - label: "Exit"
+          description: "Stop testing"
 ```
+
+Then execute based on selection:
+- View report: `npx playwright show-report`
+- Debug: `npx playwright test --debug $FAILED_TEST`
+- Screenshot: Use Playwright MCP tools
+- Exit: Stop execution
 
 ## Output Format
 
