@@ -124,6 +124,19 @@ Rules in `rules/` define Claude's behavior:
    > /pm:init
    ```
 
+## Acknowledgments & Influences
+
+This project builds upon and was influenced by several excellent tools and projects:
+
+| Project | Contribution |
+|---------|--------------|
+| [CCPM](https://github.com/automazeio/ccpm) | Original Claude Code Project Manager - the foundation this workflow system evolved from |
+| [Context7 MCP](https://github.com/upstash/context7) | Framework documentation fetching for best practices research |
+| [Episodic Memory MCP](https://github.com/anthropics/claude-code) | Conversation memory and search across sessions |
+| [Playwright](https://playwright.dev/) | E2E testing framework integration |
+| [ast-grep](https://ast-grep.github.io/) | AST-based code search patterns |
+| [GitHub CLI](https://cli.github.com/) | Issue and project board automation |
+
 ## License
 
 MIT
