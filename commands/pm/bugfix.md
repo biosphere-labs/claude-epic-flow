@@ -52,16 +52,16 @@ Before any research or user interaction, load project context:
 
 1. **Check context exists:**
    ```bash
-   ls -la .claude/context/*.md 2>/dev/null | wc -l
+   ls -la workflow/context/*.md 2>/dev/null | wc -l
    ```
    - If 0 files: Tell user "❌ No context found. Run /ccpmcontext:create first." and stop.
 
 2. **Load context files in order:**
-   - Read `.claude/context/project-overview.md` - Project understanding
-   - Read `.claude/context/tech-context.md` - Technical stack
-   - Read `.claude/context/progress.md` - Current status
-   - Read `.claude/context/system-patterns.md` - Architecture patterns
-   - Read `.claude/context/project-structure.md` - File organization
+   - Read `workflow/context/project-overview.md` - Project understanding
+   - Read `workflow/context/tech-context.md` - Technical stack
+   - Read `workflow/context/progress.md` - Current status
+   - Read `workflow/context/system-patterns.md` - Architecture patterns
+   - Read `workflow/context/project-structure.md` - File organization
 
 3. **Brief acknowledgment (don't be verbose):**
    ```
