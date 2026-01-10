@@ -110,6 +110,32 @@ Rules in `rules/` define Claude's behavior:
 - `testing-philosophy.md` - Integration over mocks
 - `agent-coordination.md` - Parallel agent work
 
+## Dependencies
+
+Tools and MCP servers used by the workflow:
+
+### Required
+
+| Tool | Purpose | Install |
+|------|---------|---------|
+| [GitHub CLI](https://cli.github.com/) | Issue/PR automation, project boards | `brew install gh` then `gh auth login` |
+| [Episodic Memory MCP](https://github.com/erichung9060/episodic-memory-mcp) | Conversation memory across sessions | `claude mcp add episodic-memory` |
+
+### Recommended
+
+| Tool | Purpose | Install |
+|------|---------|---------|
+| [ast-grep](https://ast-grep.github.io/) | Structural code search (25+ languages) | `cargo install ast-grep --locked` |
+| [Playwright](https://playwright.dev/) | E2E testing | `npx playwright install` |
+| [Playwright MCP](https://github.com/anthropics/anthropic-quickstarts/tree/main/mcp-servers/playwright) | Browser automation for tests | `claude mcp add playwright` |
+| [gum](https://github.com/charmbracelet/gum) | Interactive CLI prompts | `brew install gum` |
+
+### Optional
+
+| Tool | Purpose | Install |
+|------|---------|---------|
+| [Context7 MCP](https://github.com/upstash/context7) | Framework documentation lookup | `claude mcp add context7` |
+
 ## Installation
 
 1. Clone to `~/.claude/`:
@@ -117,7 +143,14 @@ Rules in `rules/` define Claude's behavior:
    git clone git@github.com:biosphere-labs/claude-epic-flow.git ~/.claude
    ```
 
-2. Initialize your project:
+2. Install dependencies (at minimum):
+   ```bash
+   brew install gh && gh auth login
+   cargo install ast-grep --locked
+   claude mcp add episodic-memory
+   ```
+
+3. Initialize your project:
    ```bash
    cd your-project
    claude
