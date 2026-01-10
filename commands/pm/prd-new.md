@@ -208,13 +208,23 @@ Don't force forward when backward gives better results.
 
 After creating the PRD file, sync to GitHub as a Backlog issue:
 
-**Project Configuration:**
+**Project Configuration (from .claude/project.yaml):**
 ```bash
-PROJECT_NUMBER=8
-PROJECT_OWNER="biosphere-labs"
-PROJECT_ID="PVT_kwHOAKGL6M4BFEvm"
-STATUS_FIELD_ID="PVTSSF_lAHOAKGL6M4BFEvmzg2hFR4"
-STATUS_BACKLOG="f75ad846"
+# Check for project config
+if [ ! -f ".claude/project.yaml" ]; then
+  echo "⚠️ No project config - skipping GitHub sync"
+  # Skip sync but continue with PRD creation
+else
+  # Extract GitHub repo (owner/repo format)
+  GITHUB_REPO=$(grep -A2 "^github:" .claude/project.yaml | grep "repo:" | sed 's/.*repo: *"\?\([^"]*\)"\?/\1/' | tr -d ' ')
+
+  # Optional: Project board settings (if configured)
+  PROJECT_NUMBER=$(grep "project_number:" .claude/project.yaml | sed 's/.*project_number: *//' | tr -d ' "')
+  PROJECT_OWNER=$(grep "project_owner:" .claude/project.yaml | sed 's/.*project_owner: *//' | tr -d ' "')
+  PROJECT_ID=$(grep "project_id:" .claude/project.yaml | sed 's/.*project_id: *//' | tr -d ' "')
+  STATUS_FIELD_ID=$(grep "status_field_id:" .claude/project.yaml | sed 's/.*status_field_id: *//' | tr -d ' "')
+  STATUS_BACKLOG=$(grep "Backlog_status_id:" .claude/project.yaml | sed 's/.*: *//' | tr -d ' "')
+fi
 ```
 
 **1. Check Remote Repository:**
@@ -223,8 +233,10 @@ remote_url=$(git remote get-url origin 2>/dev/null || echo "")
 if [[ "$remote_url" == *"automazeio/ccpm"* ]]; then
   echo "⚠️ Skipping GitHub sync (template repo)"
   # Skip sync but continue
+elif [ -z "$GITHUB_REPO" ]; then
+  echo "⚠️ Skipping GitHub sync (no GitHub repo configured)"
 else
-  REPO=$(echo "$remote_url" | sed 's|.*github.com[:/]||' | sed 's|\.git$||')
+  REPO="$GITHUB_REPO"
 fi
 ```
 

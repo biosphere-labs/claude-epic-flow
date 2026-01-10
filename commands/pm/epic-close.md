@@ -11,6 +11,26 @@ Complete an epic: verify tasks, merge branch, cleanup worktree, update status.
 /pm:epic-close <epic_name>
 ```
 
+## Project Configuration
+
+Read from `.claude/project.yaml`:
+
+```bash
+# Check for project config
+if [ ! -f ".claude/project.yaml" ]; then
+  echo "❌ No project configuration found"
+  echo "   Run: /pm:init to configure this project"
+  exit 1
+fi
+
+# Extract GitHub repo (owner/repo format)
+GITHUB_REPO=$(grep -A2 "^github:" .claude/project.yaml | grep "repo:" | sed 's/.*repo: *"\?\([^"]*\)"\?/\1/' | tr -d ' ')
+
+# Optional: Project board settings (if configured)
+PROJECT_NUMBER=$(grep "project_number:" .claude/project.yaml | sed 's/.*project_number: *//' | tr -d ' "')
+PROJECT_OWNER=$(grep "project_owner:" .claude/project.yaml | sed 's/.*project_owner: *//' | tr -d ' "')
+```
+
 ## Instructions
 
 ### 1. Verify All Tasks Complete
@@ -147,12 +167,11 @@ If epic references a PRD, update its status to "complete".
 Update the GitHub issue with final task completion status before closing:
 
 ```bash
-# Check remote origin (follow /rules/github-operations.md)
-remote_url=$(git remote get-url origin 2>/dev/null || echo "")
-if [[ "$remote_url" == *"automazeio/ccpm"* ]]; then
-  echo "⚠️ Skipping GitHub sync - template repository"
+# Use GITHUB_REPO from project.yaml (loaded in Project Configuration section)
+if [ -z "$GITHUB_REPO" ]; then
+  echo "⚠️ Skipping GitHub sync - no GitHub repo configured"
 else
-  REPO=$(echo "$remote_url" | sed 's|.*github.com[:/]||' | sed 's|\.git$||')
+  REPO="$GITHUB_REPO"
 
   # Check if epic has a GitHub issue
   existing_url=$(grep '^github:' workflow/epics/$ARGUMENTS/epic.md | sed 's/^github: *//')

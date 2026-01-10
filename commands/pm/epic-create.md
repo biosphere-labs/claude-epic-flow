@@ -8,12 +8,24 @@ Create a technical implementation epic from an idea or PRD. If the PRD has a Git
 
 ## Project Configuration
 
+Read from `.claude/project.yaml`:
+
 ```bash
-PROJECT_NUMBER=8
-PROJECT_OWNER="biosphere-labs"
-PROJECT_ID="PVT_kwHOAKGL6M4BFEvm"
-STATUS_FIELD_ID="PVTSSF_lAHOAKGL6M4BFEvmzg2hFR4"
-STATUS_TODO="66b38afa"
+# Check for project config
+if [ ! -f ".claude/project.yaml" ]; then
+  echo "⚠️ No project config - GitHub sync will be skipped"
+  # Continue with epic creation
+else
+  # Extract GitHub repo (owner/repo format)
+  GITHUB_REPO=$(grep -A2 "^github:" .claude/project.yaml | grep "repo:" | sed 's/.*repo: *"\?\([^"]*\)"\?/\1/' | tr -d ' ')
+
+  # Optional: Project board settings (if configured)
+  PROJECT_NUMBER=$(grep "project_number:" .claude/project.yaml | sed 's/.*project_number: *//' | tr -d ' "')
+  PROJECT_OWNER=$(grep "project_owner:" .claude/project.yaml | sed 's/.*project_owner: *//' | tr -d ' "')
+  PROJECT_ID=$(grep "project_id:" .claude/project.yaml | sed 's/.*project_id: *//' | tr -d ' "')
+  STATUS_FIELD_ID=$(grep "status_field_id:" .claude/project.yaml | sed 's/.*status_field_id: *//' | tr -d ' "')
+  STATUS_TODO=$(grep "ToDo_status_id:" .claude/project.yaml | sed 's/.*: *//' | tr -d ' "')
+fi
 ```
 
 ## Usage
@@ -240,7 +252,6 @@ if [ -f "$PRD_FILE" ]; then
 
   if [ -n "$prd_github" ] && [ "$prd_github" != "" ]; then
     issue_num=$(echo "$prd_github" | grep -oE '[0-9]+$')
-    repo=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 
     # Update issue title from "PRD: xxx" to "Epic: xxx"
     gh issue edit "$issue_num" \
@@ -248,19 +259,23 @@ if [ -f "$PRD_FILE" ]; then
       --remove-label "prd,backlog" \
       --add-label "epic,feature" 2>/dev/null
 
-    # Move to ToDo column in project
-    item_id=$(gh project item-list $PROJECT_NUMBER \
-      --owner "$PROJECT_OWNER" \
-      --format json 2>/dev/null | \
-      jq -r --arg url "$prd_github" '.items[] | select(.content.url == $url) | .id' 2>/dev/null)
+    # Move to ToDo column in project (if project board configured)
+    if [ -n "$PROJECT_NUMBER" ] && [ -n "$PROJECT_OWNER" ]; then
+      item_id=$(gh project item-list $PROJECT_NUMBER \
+        --owner "$PROJECT_OWNER" \
+        --format json 2>/dev/null | \
+        jq -r --arg url "$prd_github" '.items[] | select(.content.url == $url) | .id' 2>/dev/null)
 
-    if [ -n "$item_id" ] && [ "$item_id" != "null" ]; then
-      gh project item-edit \
-        --project-id "$PROJECT_ID" \
-        --id "$item_id" \
-        --field-id "$STATUS_FIELD_ID" \
-        --single-select-option-id "$STATUS_TODO" 2>/dev/null
-      echo "✅ Promoted PRD issue #$issue_num → ToDo"
+      if [ -n "$item_id" ] && [ "$item_id" != "null" ] && [ -n "$PROJECT_ID" ] && [ -n "$STATUS_FIELD_ID" ] && [ -n "$STATUS_TODO" ]; then
+        gh project item-edit \
+          --project-id "$PROJECT_ID" \
+          --id "$item_id" \
+          --field-id "$STATUS_FIELD_ID" \
+          --single-select-option-id "$STATUS_TODO" 2>/dev/null
+        echo "✅ Promoted PRD issue #$issue_num → ToDo"
+      fi
+    else
+      echo "✅ Promoted PRD issue #$issue_num (no project board configured)"
     fi
 
     # Update epic file with the same GitHub URL

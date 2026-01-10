@@ -17,13 +17,31 @@ Sync existing PRDs to GitHub as Backlog issues on the project Kanban board.
 
 ## Project Configuration
 
+Read from `.claude/project.yaml`:
+
 ```bash
-PROJECT_NUMBER=8
-PROJECT_OWNER="biosphere-labs"
-PROJECT_ID="PVT_kwHOAKGL6M4BFEvm"
-STATUS_FIELD_ID="PVTSSF_lAHOAKGL6M4BFEvmzg2hFR4"
-STATUS_BACKLOG="f75ad846"
-STATUS_TODO="66b38afa"
+# Check for project config
+if [ ! -f ".claude/project.yaml" ]; then
+  echo "❌ No project configuration found"
+  echo "   Run: /pm:init to configure this project"
+  exit 1
+fi
+
+# Extract GitHub repo (owner/repo format)
+GITHUB_REPO=$(grep -A2 "^github:" .claude/project.yaml | grep "repo:" | sed 's/.*repo: *"\?\([^"]*\)"\?/\1/' | tr -d ' ')
+
+if [ -z "$GITHUB_REPO" ]; then
+  echo "❌ GitHub repo not configured in .claude/project.yaml"
+  exit 1
+fi
+
+# Optional: Project board settings (if configured)
+PROJECT_NUMBER=$(grep "project_number:" .claude/project.yaml | sed 's/.*project_number: *//' | tr -d ' "')
+PROJECT_OWNER=$(grep "project_owner:" .claude/project.yaml | sed 's/.*project_owner: *//' | tr -d ' "')
+PROJECT_ID=$(grep "project_id:" .claude/project.yaml | sed 's/.*project_id: *//' | tr -d ' "')
+STATUS_FIELD_ID=$(grep "status_field_id:" .claude/project.yaml | sed 's/.*status_field_id: *//' | tr -d ' "')
+STATUS_BACKLOG=$(grep "Backlog_status_id:" .claude/project.yaml | sed 's/.*: *//' | tr -d ' "')
+STATUS_TODO=$(grep "ToDo_status_id:" .claude/project.yaml | sed 's/.*: *//' | tr -d ' "')
 ```
 
 ## Instructions
@@ -31,12 +49,15 @@ STATUS_TODO="66b38afa"
 ### 0. Check Remote Repository
 
 ```bash
+# GITHUB_REPO already loaded from project.yaml in Project Configuration section
 remote_url=$(git remote get-url origin 2>/dev/null || echo "")
 if [[ "$remote_url" == *"automazeio/ccpm"* ]]; then
   echo "❌ Cannot sync to template repository"
   exit 1
 fi
-REPO=$(echo "$remote_url" | sed 's|.*github.com[:/]||' | sed 's|\.git$||')
+
+# Use GITHUB_REPO from project.yaml (already set above)
+REPO="$GITHUB_REPO"
 ```
 
 ### 1. Handle No Arguments (List Mode)

@@ -4,30 +4,41 @@ This rule defines the valid sequences through the PM workflow and prerequisites 
 
 ## Valid Workflow Paths
 
+### Project Setup (Once per project)
+```
+init
+```
+Run once to configure `.claude/project.yaml` with GitHub repo and project board settings.
+
 ### Feature Workflow (Full)
 ```
-prd-new → epic-create → epic-decompose → epic-sync → epic-start → epic-verify → epic-close
+init → prd-new → epic-create → epic-decompose → epic-sync → epic-start → epic-verify → epic-close
 ```
 
 ### Feature Workflow (Quick)
 ```
-epic-create → epic-decompose → epic-sync → epic-start → epic-verify → epic-close
+init → epic-create → epic-decompose → epic-sync → epic-start → epic-verify → epic-close
 ```
 Use when feature is already well-defined (no PRD needed).
 
 ### Bug Workflow
 ```
-bugfix (all-in-one)
+init → bugfix (all-in-one)
 ```
 Or expanded:
 ```
-bug-observe → bugfix → bug-sync
+init → bug-observe → bugfix → bug-sync
 ```
 
 ## Command Prerequisites
 
+### `/pm:init`
+**Prerequisites:** Git repository (recommended: with GitHub remote)
+**Creates:** `.claude/project.yaml`, `workflow/` directory structure
+**Next:** Any other PM command
+
 ### `/pm:prd-new <name>`
-**Prerequisites:** None (entry point)
+**Prerequisites:** Project initialized (`.claude/project.yaml` exists)
 **Creates:** `workflow/prds/<name>.md`
 **Next:** `/pm:epic-create <name>`
 
@@ -207,6 +218,10 @@ preflight_check() {
                     │   Start     │
                     └──────┬──────┘
                            │
+                    ┌──────▼──────┐
+                    │    init     │◄─── Run once per project
+                    └──────┬──────┘
+                           │
               ┌────────────┴────────────┐
               ▼                         ▼
       ┌───────────────┐         ┌───────────────┐
@@ -254,11 +269,12 @@ preflight_check() {
 
 | Command | Requires | Creates | Warn If Missing |
 |---------|----------|---------|-----------------|
-| prd-new | - | PRD file | - |
-| epic-create | - | Epic dir + epic.md | PRD |
+| init | git repo | project.yaml + workflow/ | - |
+| prd-new | project.yaml | PRD file | - |
+| epic-create | project.yaml | Epic dir + epic.md | PRD |
 | epic-decompose | epic.md | Task files | - |
 | epic-sync | epic.md + tasks | GitHub issue | - |
 | epic-start | epic.md + tasks | Worktree | GitHub sync |
 | epic-verify | epic.md | Test results | Completed tasks |
 | epic-close | epic.md | Merged PR | Open tasks |
-| bugfix | - | Bugfix session | - |
+| bugfix | project.yaml | Bugfix session | - |
