@@ -230,7 +230,7 @@ fi
 **1. Check Remote Repository:**
 ```bash
 remote_url=$(git remote get-url origin 2>/dev/null || echo "")
-if [[ "$remote_url" == *"biosphere-labs/claude-code-for-solo-founder"* ]]; then
+if [[ "$remote_url" == *"biosphere-labs/claude-epic-flow"* ]]; then
   echo "⚠️ Skipping GitHub sync (template repo)"
   # Skip sync but continue
 elif [ -z "$GITHUB_REPO" ]; then

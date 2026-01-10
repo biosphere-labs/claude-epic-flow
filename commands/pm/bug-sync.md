@@ -58,7 +58,7 @@ Follow `/rules/github-operations.md`:
 ```bash
 # GITHUB_REPO already loaded from project.yaml in Project Configuration section
 remote_url=$(git remote get-url origin 2>/dev/null || echo "")
-if [[ "$remote_url" == *"biosphere-labs/claude-code-for-solo-founder"* ]] || [[ "$remote_url" == *"biosphere-labs/claude-code-for-solo-founder.git"* ]]; then
+if [[ "$remote_url" == *"biosphere-labs/claude-epic-flow"* ]] || [[ "$remote_url" == *"biosphere-labs/claude-epic-flow.git"* ]]; then
   echo "❌ ERROR: You're trying to sync with the CCPM template repository!"
   exit 1
 fi

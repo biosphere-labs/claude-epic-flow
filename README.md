@@ -1,6 +1,6 @@
-# Claude Code for Solo Founders
+# Claude Epic Flow
 
-A comprehensive project management and workflow system for Claude Code, designed for solo founders and small teams.
+An epic-driven project management and workflow system for Claude Code.
 
 ## Overview
 
@@ -114,7 +114,7 @@ Rules in `rules/` define Claude's behavior:
 
 1. Clone to `~/.claude/`:
    ```bash
-   git clone git@github.com:biosphere-labs/claude-code-for-solo-founder.git ~/.claude
+   git clone git@github.com:biosphere-labs/claude-epic-flow.git ~/.claude
    ```
 
 2. Initialize your project:

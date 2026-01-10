@@ -51,7 +51,7 @@ STATUS_TODO=$(grep "ToDo_status_id:" .claude/project.yaml | sed 's/.*: *//' | tr
 ```bash
 # GITHUB_REPO already loaded from project.yaml in Project Configuration section
 remote_url=$(git remote get-url origin 2>/dev/null || echo "")
-if [[ "$remote_url" == *"biosphere-labs/claude-code-for-solo-founder"* ]]; then
+if [[ "$remote_url" == *"biosphere-labs/claude-epic-flow"* ]]; then
   echo "❌ Cannot sync to template repository"
   exit 1
 fi
