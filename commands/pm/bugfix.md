@@ -396,11 +396,71 @@ For each bug (up to 5 concurrent), use Task tool:
    For each bug in the parallel group, use Task tool:
 
    > Use Task tool with subagent_type "general-purpose"
-   > Prompt: "Working in worktree: ../bugfix-$BUGFIX_ID/. Fix bug BUG-{n}. Read workflow/bugfixes/$BUGFIX_ID/BUG-{n}.md for analysis and plan. Implement the fix. Write/update tests. Run related tests. Update bug status to 'fixed'. Commit: fix({component}): {bug title}"
+   > Prompt: "Working in worktree: ../bugfix-$BUGFIX_ID/. Fix bug BUG-{n}. Read workflow/bugfixes/$BUGFIX_ID/BUG-{n}.md for analysis and plan. Implement the fix. Update bug status to 'fixed'. Commit: fix({component}): {bug title}"
 
 3. **Wait for group to complete, then start next group.**
 
 4. **Update checkpoint:** Edit progress.md after each bug fixed.
+
+### Phase 4.5: Write Regression Tests
+
+**CRITICAL: Every bugfix MUST produce a regression test file.**
+
+For each fixed bug, write a Playwright test that:
+- Would have **failed** before the fix (proves the bug existed)
+- **Passes** after the fix (proves it's fixed)
+- Becomes part of the permanent test suite
+
+1. **Create regression test file:**
+   ```bash
+   # Naming convention: {feature}-{bug-id}.spec.ts
+   # Location: frontend/e2e/regression/
+   mkdir -p frontend/e2e/regression
+   ```
+
+2. **For each bug, generate test file:**
+
+   > Use Task tool with subagent_type "general-purpose"
+   > Prompt: |
+   >   Write a Playwright regression test for BUG-{n}.
+   >
+   >   Bug details from: workflow/bugfixes/$BUGFIX_ID/BUG-{n}.md
+   >
+   >   Requirements:
+   >   - File: frontend/e2e/regression/bug-{n}-{slug}.spec.ts
+   >   - Test MUST reproduce the exact bug scenario
+   >   - Include descriptive test name referencing the bug
+   >   - Add comment linking to bug report
+   >   - Test should be self-contained and repeatable
+   >
+   >   Example structure:
+   >   ```typescript
+   >   import { test, expect } from '@playwright/test';
+   >
+   >   // Regression test for BUG-{n}: {title}
+   >   // See: workflow/bugfixes/$BUGFIX_ID/BUG-{n}.md
+   >   test('should {expected behavior} - regression for BUG-{n}', async ({ page }) => {
+   >     // Setup: Navigate to affected page
+   >     // Action: Reproduce the bug scenario
+   >     // Assert: Verify correct behavior (would have failed before fix)
+   >   });
+   >   ```
+   >
+   >   Commit: test(e2e): add regression test for BUG-{n}
+
+3. **Verify regression test passes:**
+   ```bash
+   cd ../bugfix-$BUGFIX_ID
+   npx playwright test frontend/e2e/regression/bug-{n}*.spec.ts
+   ```
+
+4. **Update bug file with test reference:**
+   Add to each BUG-{n}.md:
+   ```markdown
+   ## Regression Test
+   - File: `frontend/e2e/regression/bug-{n}-{slug}.spec.ts`
+   - Added: {ISO timestamp}
+   ```
 
 ### Phase 5: E2E Test Loop
 
@@ -468,8 +528,12 @@ For each bug (up to 5 concurrent), use Task tool:
    ## Remaining Issues
    - {any unfixed with reasons}
 
-   ## Test Coverage Added
-   - {new tests}
+   ## Regression Tests Added
+   | Bug | Test File | Description |
+   |-----|-----------|-------------|
+   | BUG-001 | `frontend/e2e/regression/bug-001-{slug}.spec.ts` | {what it tests} |
+
+   These tests are now part of the permanent test suite and will catch regressions.
    ```
 
 ### Phase 7: Human Review Checkpoint
