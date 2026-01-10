@@ -152,11 +152,19 @@ fi
 
 ### `/pm:epic-close <name>`
 **Prerequisites:**
+- Epic must be verified (`verified: true` in frontmatter)
 - All tasks should be closed (warn if not)
-- Tests should pass (warn if not verified)
 
 **Preflight check:**
 ```bash
+# REQUIRED: Check verification
+verified=$(grep "^verified:" workflow/epics/$NAME/epic.md | sed 's/verified: *//')
+if [ "$verified" != "true" ]; then
+  error "Epic not verified. Run: /pm:epic-verify $NAME"
+  exit 1
+fi
+
+# Check for open tasks
 open=$(grep -l "^status: *open" workflow/epics/$NAME/[0-9]*.md 2>/dev/null | wc -l)
 if [ "$open" -gt 0 ]; then
   warn "$open task(s) still open"
@@ -275,6 +283,6 @@ preflight_check() {
 | epic-decompose | epic.md | Task files | - |
 | epic-sync | epic.md + tasks | GitHub issue | - |
 | epic-start | epic.md + tasks | Worktree | GitHub sync |
-| epic-verify | epic.md | Test results | Completed tasks |
-| epic-close | epic.md | Merged PR | Open tasks |
+| epic-verify | epic.md | Test results + verified flag | Completed tasks |
+| epic-close | epic.md + verified: true | Merged PR | Open tasks |
 | bugfix | project.yaml | Bugfix session | - |

@@ -33,13 +33,40 @@ PROJECT_OWNER=$(grep "project_owner:" .claude/project.yaml | sed 's/.*project_ow
 
 ## Instructions
 
-### 1. Verify All Tasks Complete
+### 1. Verify Epic Has Been Tested
+
+Check that epic-verify has been run:
+
+```bash
+# Check for verified: true in epic frontmatter
+verified=$(grep '^verified:' workflow/epics/$ARGUMENTS/epic.md 2>/dev/null | sed 's/verified: *//')
+
+if [ "$verified" != "true" ]; then
+  echo "❌ Epic has not been verified"
+  echo ""
+  echo "   You must run: /pm:epic-verify $ARGUMENTS"
+  echo ""
+  echo "   This runs tests and ensures the epic is ready for merge."
+  echo "   Once verification passes, the epic can be closed."
+  exit 1
+fi
+
+echo "✅ Epic verification: PASSED"
+
+# Show verification timestamp
+verified_at=$(grep '^verified_at:' workflow/epics/$ARGUMENTS/epic.md 2>/dev/null | sed 's/verified_at: *//')
+if [ -n "$verified_at" ]; then
+  echo "   Verified at: $verified_at"
+fi
+```
+
+### 2. Verify All Tasks Complete
 
 Check all task files in `workflow/epics/$ARGUMENTS/`:
 - Verify all have `status: closed` in frontmatter
 - If any open tasks found: "❌ Cannot close epic. Open tasks remain: {list}"
 
-### 2. Check Worktree Status
+### 3. Check Worktree Status
 
 ```bash
 # Check if worktree exists
@@ -53,7 +80,7 @@ else
 fi
 ```
 
-### 3. Verify Clean State (if worktree exists)
+### 4. Verify Clean State (if worktree exists)
 
 ```bash
 if [ "$WORKTREE_EXISTS" = true ]; then
@@ -71,19 +98,6 @@ if [ "$WORKTREE_EXISTS" = true ]; then
     # Ask user how to proceed
   fi
 
-  cd - > /dev/null
-fi
-```
-
-### 4. Run Tests (Optional)
-
-```bash
-if [ "$WORKTREE_EXISTS" = true ]; then
-  echo "Run tests before merging? (yes/no)"
-  # If yes:
-  cd "$WORKTREE_PATH"
-  pnpm test 2>&1 | tail -20
-  # If tests fail, warn but allow user to continue
   cd - > /dev/null
 fi
 ```
@@ -281,7 +295,7 @@ git worktree prune
 
 ## Important Notes
 
+- **Verification required** - Must run `/pm:epic-verify` before close
 - Only close epics with all tasks complete
-- Tests are optional but recommended before merge
 - Merges to staging (not main) - deploy to production separately
 - Preserves all data when archiving

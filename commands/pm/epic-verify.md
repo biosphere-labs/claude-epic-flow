@@ -1,402 +1,297 @@
 ---
-description: Verify an epic before merging - runs unit tests, writes missing tests for new features, then E2E tests via Playwright MCP.
-allowed-tools: Bash, Read, Write, Edit, LS, Task, Glob, Grep, mcp__playwright__browser_navigate, mcp__playwright__browser_snapshot, mcp__playwright__browser_click, mcp__playwright__browser_type, mcp__playwright__browser_fill_form, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_console_messages, mcp__playwright__browser_network_requests, mcp__playwright__browser_select_option, mcp__playwright__browser_wait_for
+description: Verify an epic before merging - runs unit tests, generates missing tests, then runs E2E tests. Required before epic-close.
+allowed-tools: Bash, Read, Write, Edit, LS, Task, Glob, Grep, Skill
 ---
 
 # Epic Verify
 
-Comprehensive pre-merge verification: unit tests, test coverage for new features, and E2E acceptance tests.
+Comprehensive pre-merge verification. Orchestrates unit tests and E2E testing commands. **Required before epic-close.**
 
 ## Usage
 ```
-/pm:epic-verify <epic_name> [port]
+/pm:epic-verify <epic_name>
 ```
 
 ## What This Command Does
 
 1. **Detects changes** - What files changed in backend/frontend
 2. **Runs unit tests** - Existing tests for changed areas
-3. **Writes missing tests** - Spawns agents for new features without tests
-4. **E2E tests** - Playwright MCP for acceptance criteria
-5. **Reports results** - Pass/fail with recommendations
+3. **Generates missing tests** - Calls `/testing:acceptance` to create E2E tests from acceptance criteria
+4. **Runs E2E tests** - Calls `/testing:e2e` to run all Playwright tests
+5. **Updates verification status** - Marks epic as verified (or not)
+6. **Syncs to GitHub** - Calls `/pm:epic-sync` to update status
+
+## Project Configuration
+
+Read from `.claude/project.yaml`:
+
+```bash
+# Check for project config (optional for verification, required for sync)
+if [ -f ".claude/project.yaml" ]; then
+  GITHUB_REPO=$(grep -A2 "^github:" .claude/project.yaml | grep "repo:" | sed 's/.*repo: *"\?\([^"]*\)"\?/\1/' | tr -d ' ')
+fi
+```
 
 ## Quick Check
 
 ```bash
-# Verify worktree exists
-git worktree list | grep ".worktrees/epic/$ARGUMENTS" || echo "❌ No worktree. Run: /pm:epic-start $ARGUMENTS"
-
-# Check epic docs exist
+# Verify epic exists
 test -d workflow/epics/$ARGUMENTS || echo "❌ Epic not found: $ARGUMENTS"
+
+# Verify worktree exists (recommended but not required)
+git worktree list | grep ".worktrees/epic/$ARGUMENTS" || echo "⚠️ No worktree found. Tests will run in main repo."
 ```
 
 ## Instructions
 
 ### Phase 1: Setup and Change Detection
 
-#### 1.1 Determine Ports
+#### 1.1 Determine Working Directory
 
 ```bash
-# Generate random ports to avoid conflicts
-BACKEND_PORT=$((RANDOM % 50000 + 10000))
-FRONTEND_PORT=$((BACKEND_PORT + 1))
-FRONTEND_URL="http://localhost:$FRONTEND_PORT"
-
-echo "Using ports: Backend=$BACKEND_PORT, Frontend=$FRONTEND_PORT"
-```
-
-#### 1.2 Setup Worktree Dependencies
-
-```bash
-WORKTREE_PATH=.worktrees/epic/$ARGUMENTS
-
-# Check for missing dependencies
-if [ ! -d "$WORKTREE_PATH/backend/node_modules" ]; then
-  echo "Setting up worktree dependencies..."
-  cp -r backend/node_modules $WORKTREE_PATH/backend/
-  cp -r frontend/node_modules $WORKTREE_PATH/frontend/
-  cp -r packages/shared-types/node_modules $WORKTREE_PATH/packages/shared-types/
-  cp -r packages/shared-types/dist $WORKTREE_PATH/packages/shared-types/
-fi
-
-if [ ! -f "$WORKTREE_PATH/backend/.env" ]; then
-  cp backend/.env $WORKTREE_PATH/backend/.env
-  cp frontend/.env $WORKTREE_PATH/frontend/.env
+# Check if worktree exists
+if git worktree list | grep -q ".worktrees/epic/$ARGUMENTS"; then
+  WORK_DIR=".worktrees/epic/$ARGUMENTS"
+  echo "Using worktree: $WORK_DIR"
+else
+  WORK_DIR="."
+  echo "Using main repository (no worktree found)"
 fi
 ```
 
-#### 1.3 Detect Changed Areas
+#### 1.2 Detect Changed Areas
 
 ```bash
-cd $WORKTREE_PATH
+cd $WORK_DIR
 
 # Get changed files compared to staging
-CHANGED_FILES=$(git diff --name-only staging...HEAD)
+CHANGED_FILES=$(git diff --name-only staging...HEAD 2>/dev/null || git diff --name-only HEAD~10)
 
 # Categorize changes
 BACKEND_CHANGED=false
 FRONTEND_CHANGED=false
-SHARED_CHANGED=false
 
 echo "$CHANGED_FILES" | grep -q "^backend/" && BACKEND_CHANGED=true
 echo "$CHANGED_FILES" | grep -q "^frontend/" && FRONTEND_CHANGED=true
-echo "$CHANGED_FILES" | grep -q "^packages/shared-types/" && SHARED_CHANGED=true
 
 echo "Changes detected:"
 echo "  Backend: $BACKEND_CHANGED"
 echo "  Frontend: $FRONTEND_CHANGED"
-echo "  Shared types: $SHARED_CHANGED"
 
-cd -
+cd - > /dev/null
 ```
 
 ### Phase 2: Unit Tests
 
-#### 2.1 Run Existing Tests
+#### 2.1 Run Backend Tests
 
 ```bash
-cd $WORKTREE_PATH
-
-# Run backend tests if backend changed
 if [ "$BACKEND_CHANGED" = true ]; then
   echo "Running backend unit tests..."
-  cd backend
+  cd $WORK_DIR/backend
   pnpm test 2>&1 | tee /tmp/backend-test-results.txt
   BACKEND_TEST_EXIT=$?
-  cd ..
-fi
+  cd - > /dev/null
 
-# Run frontend tests if frontend changed
+  if [ $BACKEND_TEST_EXIT -eq 0 ]; then
+    echo "✅ Backend tests passed"
+  else
+    echo "❌ Backend tests failed"
+  fi
+fi
+```
+
+#### 2.2 Run Frontend Tests
+
+```bash
 if [ "$FRONTEND_CHANGED" = true ]; then
   echo "Running frontend unit tests..."
-  cd frontend
+  cd $WORK_DIR/frontend
   pnpm test 2>&1 | tee /tmp/frontend-test-results.txt
   FRONTEND_TEST_EXIT=$?
-  cd ..
+  cd - > /dev/null
+
+  if [ $FRONTEND_TEST_EXIT -eq 0 ]; then
+    echo "✅ Frontend tests passed"
+  else
+    echo "❌ Frontend tests failed"
+  fi
 fi
-
-cd -
 ```
 
-#### 2.2 Identify New Features Without Tests
+### Phase 3: Generate Missing E2E Tests
 
-Read task files to identify new features, then check if tests exist:
-
-```bash
-# For each task, extract what was implemented
-for task in workflow/epics/$ARGUMENTS/[0-9]*.md; do
-  [ -f "$task" ] || continue
-  task_name=$(grep '^name:' "$task" | sed 's/^name: *//')
-
-  # Look for implementation files mentioned or created
-  # Check if corresponding test files exist
-done
-```
-
-Use Glob and Grep to:
-1. Find new/modified source files in the epic branch
-2. Check if corresponding `.test.ts`, `.spec.ts`, or `__tests__/` files exist
-3. List files that need test coverage
-
-#### 2.3 Write Missing Tests (Parallel)
-
-For each new feature file without tests, spawn an agent:
+Call `/testing:acceptance` to generate Playwright tests from the epic's acceptance criteria:
 
 ```yaml
-Task:
-  description: "Write tests for {component}"
-  subagent_type: "general-purpose"
-  prompt: |
-    Working in worktree: .worktrees/epic/$ARGUMENTS
-
-    Write unit tests for: {source_file}
-
-    Context from task file: workflow/epics/$ARGUMENTS/{task_num}.md
-
-    Requirements:
-    1. Read the source file to understand what it does
-    2. Read the task file for acceptance criteria
-    3. Check existing test patterns in the project:
-       - Backend: backend/src/**/*.spec.ts
-       - Frontend: frontend/src/**/*.test.tsx
-    4. Write comprehensive tests covering:
-       - Happy path
-       - Edge cases from acceptance criteria
-       - Error handling
-    5. Run tests to verify they pass
-    6. Commit: test({component}): add tests for {feature}
+Skill:
+  skill: "testing:acceptance"
+  args: "$ARGUMENTS"
 ```
 
-Launch multiple agents in parallel for independent test files.
+This will:
+- Read acceptance criteria from `workflow/epics/$ARGUMENTS/epic.md` and task files
+- Generate Playwright test files at `frontend/e2e/{epic}.spec.ts`
+- Validate the generated tests pass
 
-#### 2.4 Re-run Tests After Writing
+### Phase 4: Run E2E Tests
 
-```bash
-cd $WORKTREE_PATH
+Call `/testing:e2e` to run all Playwright tests:
 
-if [ "$BACKEND_CHANGED" = true ]; then
-  echo "Re-running backend tests..."
-  cd backend && pnpm test && cd ..
-fi
-
-if [ "$FRONTEND_CHANGED" = true ]; then
-  echo "Re-running frontend tests..."
-  cd frontend && pnpm test && cd ..
-fi
-
-cd -
+```yaml
+Skill:
+  skill: "testing:e2e"
+  args: "$ARGUMENTS"
 ```
 
-### Phase 3: E2E Tests with Playwright MCP
+This will:
+- Determine appropriate mode (Chromium vs Google Profile)
+- Run Playwright tests
+- Report results
 
-#### 3.1 Start App
+### Phase 5: Generate Verification Report
 
-```bash
-echo "Starting app in worktree..."
-cd $WORKTREE_PATH
-
-./dev-worktree.sh $BACKEND_PORT $FRONTEND_PORT &
-APP_PID=$!
-
-echo "Waiting for app to start..."
-sleep 15
-
-# Verify it's running
-if curl -s "http://localhost:$FRONTEND_PORT" >/dev/null 2>&1; then
-  echo "✅ App started: $FRONTEND_URL"
-else
-  echo "⚠️ App may still be starting..."
-fi
-
-cd -
-```
-
-#### 3.2 Gather Acceptance Criteria
-
-Read epic and task files to extract acceptance criteria:
-
-```bash
-# Read epic definition
-cat workflow/epics/$ARGUMENTS/epic.md
-
-# Read all task files for acceptance criteria
-for task in workflow/epics/$ARGUMENTS/[0-9]*.md; do
-  echo "=== $(basename $task) ==="
-  grep -A 20 "## Acceptance Criteria" "$task" || true
-done
-```
-
-From these, extract:
-- Feature descriptions → pages/flows to test
-- Acceptance criteria → observable outcomes
-- User stories → test scenarios
-
-#### 3.3 Present Test Plan
-
-Before executing, present the plan:
+Create `workflow/epics/$ARGUMENTS/verification-report.md`:
 
 ```markdown
-## E2E Verification: $ARGUMENTS
+---
+verified: {true|false}
+verified_at: {ISO datetime}
+unit_tests_passed: {true|false}
+e2e_tests_passed: {true|false}
+---
 
-**Testing against:** $FRONTEND_URL
-
-Based on epic documentation, I'll verify:
-
-### From Task #1: {task name}
-1. {Observable outcome}
-2. {Observable outcome}
-
-### Smoke Tests
-- Application loads without console errors
-- Navigation works between main pages
-
-**Proceed with these tests?** (yes/adjust/skip)
-```
-
-#### 3.4 Execute E2E Tests
-
-For each criterion, use Playwright MCP:
-
-**Navigation & Setup:**
-```
-browser_navigate → $FRONTEND_URL
-browser_snapshot → Verify page loaded
-browser_console_messages → Check for errors
-```
-
-**For each test scenario:**
-```
-1. browser_snapshot → Understand current page
-2. browser_click/type/fill_form → Perform actions
-3. browser_snapshot → Verify outcome
-4. browser_take_screenshot → Evidence (on failure)
-5. Record: PASS or FAIL with details
-```
-
-**Test execution principles:**
-- Use accessibility tree from snapshot for selectors
-- Retry flaky assertions up to 3 times
-- Check console errors after each major action
-- Take screenshots on failure
-
-### Phase 4: Report Results
-
-```markdown
-## Verification Report: $ARGUMENTS
+# Verification Report: $ARGUMENTS
 
 **Date:** {timestamp}
-**Worktree:** .worktrees/epic/$ARGUMENTS
+**Working Directory:** {$WORK_DIR}
 
-### Unit Tests
+## Unit Tests
 
-**Backend:** {PASS/FAIL}
+**Backend:** {PASS/FAIL/SKIPPED}
 - Tests run: {count}
 - Passed: {count}
-- New tests written: {count}
 
-**Frontend:** {PASS/FAIL}
+**Frontend:** {PASS/FAIL/SKIPPED}
 - Tests run: {count}
 - Passed: {count}
-- New tests written: {count}
 
-### E2E Tests
+## E2E Tests
 
-**URL:** $FRONTEND_URL
+**Result:** {PASS/FAIL}
+- Tests run: {count}
+- Passed: {count}
 
-✅ **PASS** {criterion}
-✅ **PASS** {criterion}
-❌ **FAIL** {criterion}
-   - Expected: {expected}
-   - Actual: {actual}
+## Overall Result
 
-### Summary
-- Unit tests: {pass}/{total}
-- E2E tests: {pass}/{total}
+**{VERIFIED - Ready to merge | NOT VERIFIED - Needs fixes}**
 
-### Recommendation
-{READY TO MERGE / NEEDS FIXES}
+{If failed, list specific failures}
 ```
 
-### Phase 5: Next Steps
+### Phase 6: Update Epic Status
+
+```bash
+current_date=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+# Add verified field to epic frontmatter if all tests passed
+if [ "$ALL_TESTS_PASSED" = true ]; then
+  # Update or add verified field
+  if grep -q '^verified:' workflow/epics/$ARGUMENTS/epic.md; then
+    sed -i "s/^verified:.*/verified: true/" workflow/epics/$ARGUMENTS/epic.md
+  else
+    sed -i "/^status:/a verified: true" workflow/epics/$ARGUMENTS/epic.md
+  fi
+
+  # Update verified_at
+  if grep -q '^verified_at:' workflow/epics/$ARGUMENTS/epic.md; then
+    sed -i "s/^verified_at:.*/verified_at: $current_date/" workflow/epics/$ARGUMENTS/epic.md
+  else
+    sed -i "/^verified:/a verified_at: $current_date" workflow/epics/$ARGUMENTS/epic.md
+  fi
+fi
+
+# Update the updated timestamp
+sed -i "s/^updated:.*/updated: $current_date/" workflow/epics/$ARGUMENTS/epic.md
+```
+
+### Phase 7: Sync to GitHub
+
+Always sync verification status to GitHub:
+
+```yaml
+Skill:
+  skill: "pm:epic-sync"
+  args: "$ARGUMENTS"
+```
+
+### Phase 8: Output
 
 **If all tests pass:**
 ```
-✅ Epic verified! Ready for merge.
+═══════════════════════════════════════════════════════════════
+  ✅ EPIC VERIFIED: $ARGUMENTS
+═══════════════════════════════════════════════════════════════
 
-Next: /pm:epic-close $ARGUMENTS
+  Unit Tests:
+    Backend:  {PASS} ({n} tests)
+    Frontend: {PASS} ({n} tests)
+
+  E2E Tests: {PASS} ({n} tests)
+
+  Report: workflow/epics/$ARGUMENTS/verification-report.md
+  GitHub: Synced ✓
+
+  ➡️  Ready to merge:
+     /pm:epic-close $ARGUMENTS
+
+═══════════════════════════════════════════════════════════════
 ```
 
 **If tests fail:**
 ```
-❌ Some tests failed.
+═══════════════════════════════════════════════════════════════
+  ❌ VERIFICATION FAILED: $ARGUMENTS
+═══════════════════════════════════════════════════════════════
 
-Failed unit tests:
-- {list}
+  Unit Tests:
+    Backend:  {PASS/FAIL}
+    Frontend: {PASS/FAIL}
 
-Failed E2E tests:
-- {list}
+  E2E Tests: {FAIL}
 
-Options:
-1. Fix issues and re-verify: /pm:epic-verify $ARGUMENTS
-2. Review failures and fix manually
-3. Proceed anyway (not recommended): /pm:epic-close $ARGUMENTS
-```
+  Failures:
+    - {test name}: {error}
+    - {test name}: {error}
 
-### Cleanup
+  Report: workflow/epics/$ARGUMENTS/verification-report.md
 
-```bash
-# Offer to stop the app
-echo "
-App is still running on $FRONTEND_URL
+  ➡️  Fix issues and re-verify:
+     /pm:epic-verify $ARGUMENTS
 
-Options:
-1. Keep running for manual testing
-2. Stop with: kill $APP_PID
-3. Stop all worktree processes: pkill -f 'dev-worktree'
-"
+═══════════════════════════════════════════════════════════════
 ```
 
 ## Error Handling
 
-**App won't start:**
-```
-❌ Could not start app in worktree
-
-Check:
-- Dependencies installed? cd .worktrees/epic/{name} && pnpm install
-- Ports available? lsof -i:{port}
-- Build errors? Check terminal output
-
-Manual start:
-  cd .worktrees/epic/{name} && ./dev-worktree.sh {port}
-```
-
 **Unit tests fail:**
-```
-❌ Unit tests failed
+- Report failures with file paths
+- Continue to E2E tests (gather all failures)
+- Final report shows all issues
 
-Review failures in:
-- Backend: /tmp/backend-test-results.txt
-- Frontend: /tmp/frontend-test-results.txt
-
-Fix issues before proceeding with E2E tests.
-```
+**E2E tests fail:**
+- Check if app is running
+- Check Playwright configuration
+- Take screenshots on failure
 
 **No acceptance criteria found:**
-```
-⚠️ No clear acceptance criteria in epic docs.
-
-Options:
-1. Add criteria to task files
-2. Provide criteria now:
-   - What should users be able to do?
-   - What pages should work?
-```
+- Warn but continue
+- Skip test generation phase
+- Run existing E2E tests only
 
 ## Important Notes
 
-- Tests execute against LIVE app, not mocks
-- Unit tests run BEFORE E2E (fail fast)
-- New features should have test coverage before merge
-- Playwright MCP controls browser directly
-- Results focus on business outcomes, not stack traces
+- This command is **required** before `/pm:epic-close`
+- Creates verification-report.md used by epic-close
+- Sets `verified: true` in epic frontmatter when all tests pass
+- Always syncs to GitHub at the end

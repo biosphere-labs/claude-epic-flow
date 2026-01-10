@@ -359,7 +359,19 @@ For each concern identified by the simplicity review:
 - Skip any concerns that match entries in that table
 - Only present genuinely new concerns
 
-### 7. Output
+### 7. Sync to GitHub
+
+Always sync the newly created epic to GitHub:
+
+```yaml
+Skill:
+  skill: "pm:epic-sync"
+  args: "$ARGUMENTS"
+```
+
+This creates or updates the GitHub issue with the epic details.
+
+### 8. Output
 
 ```
 ═══════════════════════════════════════════════════════════════
@@ -367,7 +379,7 @@ For each concern identified by the simplicity review:
 ═══════════════════════════════════════════════════════════════
 
   Created: workflow/epics/$ARGUMENTS/epic.md
-  GitHub:  {#issue_num if promoted, otherwise "not synced"}
+  GitHub:  #{issue_num} ✓ Synced
 
   Summary:
     User flows: {n} identified
@@ -377,13 +389,11 @@ For each concern identified by the simplicity review:
 
   📍 Workflow position: Epic defined, ready to decompose into tasks
 
-  ➡️  Next steps:
-     /pm:epic-decompose $ARGUMENTS  ← Break into tasks (recommended)
-     /pm:epic-edit $ARGUMENTS       ← Edit epic details
-     /pm:epic-sync $ARGUMENTS       ← Sync to GitHub
+  ➡️  Next step:
+     /pm:epic-decompose $ARGUMENTS  ← Break into tasks
 
   🔄 Related:
-     /pm:epic-status                ← View all epics
+     /pm:epic-edit $ARGUMENTS       ← Edit epic details
      /pm:status                     ← Overall workflow status
 
 ═══════════════════════════════════════════════════════════════

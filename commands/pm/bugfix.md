@@ -551,7 +551,17 @@ After review, continue to Phase 8.
    git push -u origin bugfix/$BUGFIX_ID
    ```
 
-3. **Report to user:**
+3. **Sync to GitHub:**
+
+   ```yaml
+   Skill:
+     skill: "pm:bug-sync"
+     args: "$BUGFIX_ID"
+   ```
+
+   This updates the GitHub issue and moves it to the correct Kanban column.
+
+4. **Report to user:**
    ```
    ═══════════════════════════════════════════════════════════════
      ✅ BUGFIX SESSION COMPLETE
@@ -561,6 +571,7 @@ After review, continue to Phase 8.
      Fixed: {n}/{total} bugs
      Tests: {pass}/{total} passing
      Iterations: {count}
+     GitHub: #{issue_num} ✓ Synced → In Review
 
      Worktree: ../bugfix-$BUGFIX_ID
      Branch: bugfix/$BUGFIX_ID
@@ -577,7 +588,6 @@ After review, continue to Phase 8.
         git branch -d bugfix/$BUGFIX_ID
 
      🔄 Related:
-        /pm:bug-sync $BUGFIX_ID       ← Sync to GitHub issue
         /pm:status                    ← Overall workflow status
 
    ═══════════════════════════════════════════════════════════════

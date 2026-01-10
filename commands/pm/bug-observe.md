@@ -179,7 +179,19 @@ Areas that might break if not careful:
 **Ready for:** `/pm:bugfix workflow/bugfixes/observations/bug-$TIMESTAMP.md`
 ```
 
-### Phase 4: Output Summary
+### Phase 4: Sync to GitHub
+
+Always sync the bug report to GitHub:
+
+```yaml
+Skill:
+  skill: "pm:bug-sync"
+  args: "workflow/bugfixes/observations/bug-$TIMESTAMP.md"
+```
+
+This creates a GitHub issue and adds it to the project Kanban board.
+
+### Phase 5: Output Summary
 
 ```
 ═══════════════════════════════════════════════════════════════
@@ -197,11 +209,11 @@ Areas that might break if not careful:
 
   Probable root cause: {most likely cause}
 
-  📍 Workflow position: Bug documented, ready to fix
+  📍 Workflow position: Bug documented and synced, ready to fix
+  GitHub: #{issue_num} ✓ Synced
 
   ➡️  Next steps:
-     /pm:bugfix bug-$TIMESTAMP.md   ← Start fixing (recommended)
-     /pm:bug-sync bug-$TIMESTAMP.md ← Sync to GitHub first
+     /pm:bugfix bug-$TIMESTAMP.md   ← Start fixing
 
   🔄 Related:
      /pm:bugfix "description"       ← Quick fix without report

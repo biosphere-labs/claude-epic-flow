@@ -15,11 +15,12 @@ Create worktree, start development servers, and orchestrate task execution.
 
 1. **Creates worktree** at `.worktrees/epic/{name}` with branch `epic/{name}`
 2. **Updates epic status** to `in-progress`
-3. **Copies dependencies** (node_modules, .env files)
-4. **Generates random ports** (avoids conflicts)
-5. **Starts dev servers** using `dev-worktree.sh`
-6. **Orchestrates task execution** based on decomposed tasks
-7. **Auto-calls issue-close/issue-sync** as tasks complete
+3. **Syncs to GitHub** (status change reflected)
+4. **Copies dependencies** (node_modules, .env files)
+5. **Generates random ports** (avoids conflicts)
+6. **Starts dev servers** using `dev-worktree.sh`
+7. **Orchestrates task execution** based on decomposed tasks
+8. **Auto-syncs epic** as tasks complete
 
 ## Preflight Check
 
@@ -85,7 +86,19 @@ sed -i 's/^status: backlog/status: in-progress/' workflow/epics/$ARGUMENTS/epic.
 echo "✅ Epic status set to in-progress"
 ```
 
-### 2. Setup Worktree Dependencies
+### 2. Sync to GitHub
+
+Sync the status change to GitHub:
+
+```yaml
+Skill:
+  skill: "pm:epic-sync"
+  args: "$ARGUMENTS"
+```
+
+This updates the GitHub issue to reflect the epic is now in-progress.
+
+### 3. Setup Worktree Dependencies
 
 Copy gitignored files that the app needs to run (node_modules, .env, built artifacts):
 
@@ -112,7 +125,7 @@ if [ "$WORKTREE_NEW" = true ] || [ ! -d "$WORKTREE_PATH/backend/node_modules" ];
 fi
 ```
 
-### 3. Generate Random Ports
+### 4. Generate Random Ports
 
 ```bash
 # Generate random ports in non-privileged range (10000-60000)
@@ -123,7 +136,7 @@ FRONTEND_PORT=$((BACKEND_PORT + 1))
 echo "Using ports: Backend=$BACKEND_PORT, Frontend=$FRONTEND_PORT"
 ```
 
-### 4. Start Development Servers
+### 5. Start Development Servers
 
 ```bash
 cd .worktrees/epic/$ARGUMENTS
@@ -141,7 +154,7 @@ else
 fi
 ```
 
-### 5. Analyze Tasks for Parallel Execution
+### 6. Analyze Tasks for Parallel Execution
 
 Read task files and build execution plan:
 
@@ -156,7 +169,7 @@ for task in workflow/epics/$ARGUMENTS/[0-9][0-9][0-9].md; do
 done
 ```
 
-### 6. Execute Tasks (Orchestration)
+### 7. Execute Tasks (Orchestration)
 
 Launch parallel agents for ready tasks:
 
@@ -179,20 +192,19 @@ Task:
     5. Follow /rules/agent-coordination.md for parallel work
 
     On completion, the orchestrator will:
-    - Call /pm:issue-close automatically
-    - Call /pm:issue-sync to update GitHub
+    - Update task status to closed
+    - Auto-sync epic to GitHub via /pm:epic-sync
 ```
 
-### 7. Monitor and Coordinate
+### 8. Monitor and Coordinate
 
 As tasks complete:
 - Detect completion (status: closed in frontmatter)
-- **Automatically call** `/pm:issue-close $ARGUMENTS {task_num}`
-- **Automatically call** `/pm:issue-sync $ARGUMENTS` to update GitHub
+- **Automatically sync** via `/pm:epic-sync $ARGUMENTS` to update GitHub checkboxes
 - Check if blocked tasks are now ready
 - Launch newly-ready tasks
 
-### 8. Update Execution Status
+### 9. Update Execution Status
 
 Create `workflow/epics/$ARGUMENTS/execution-status.md`:
 
@@ -222,13 +234,14 @@ ports:
 - Agent-2: Task 002 (in_progress)
 ```
 
-### 9. Output
+### 10. Output
 
 ```
 ✅ Epic orchestration started: $ARGUMENTS
 
 Worktree: .worktrees/epic/$ARGUMENTS
 Branch: epic/$ARGUMENTS
+GitHub: Synced ✓
 
 Development servers:
   Frontend: http://localhost:{FRONTEND_PORT}
@@ -240,20 +253,23 @@ Launching {n} parallel agents:
   - Task 003: {name} ⏸ Waiting (depends on 001)
 
 As tasks complete:
-  - issue-close called automatically
-  - GitHub checkboxes updated automatically
+  - Task status updated to closed
+  - GitHub checkboxes updated via epic-sync
 
 When all tasks done:
-  /pm:epic-verify $ARGUMENTS  - Run E2E tests
-  /pm:epic-close $ARGUMENTS   - Merge to main
+  /pm:epic-verify $ARGUMENTS  - Run tests (required)
+  /pm:epic-close $ARGUMENTS   - Merge to staging
 ```
 
 ## Manual Override (Edge Cases)
 
-If you need to manually close a task or sync:
+If you need to manually update task status or sync:
 ```
-/pm:issue-close $ARGUMENTS 001  - Mark task 001 complete
-/pm:issue-sync $ARGUMENTS       - Update GitHub checkboxes
+# Edit task status directly in the markdown file
+sed -i 's/^status: open/status: closed/' workflow/epics/$ARGUMENTS/001.md
+
+# Then sync to GitHub
+/pm:epic-sync $ARGUMENTS       - Update GitHub checkboxes
 ```
 
 ## Stopping the Epic

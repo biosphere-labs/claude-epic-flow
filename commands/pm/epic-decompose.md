@@ -239,9 +239,21 @@ Before finalizing tasks, verify:
 - [ ] Parallel tasks don't conflict with each other
 - [ ] Combined tasks cover all epic requirements
 
-### 10. Post-Decomposition
+### 10. Sync to GitHub
 
-After successfully creating tasks:
+Always sync the decomposed tasks to GitHub:
+
+```yaml
+Skill:
+  skill: "pm:epic-sync"
+  args: "$ARGUMENTS"
+```
+
+This updates the GitHub issue with the task checklist.
+
+### 11. Post-Decomposition
+
+After successfully creating and syncing tasks:
 
 ```
 ═══════════════════════════════════════════════════════════════
@@ -253,16 +265,15 @@ After successfully creating tasks:
     - Parallel: {parallel_count}
     - Sequential: {sequential_count}
   Estimated effort: {sum of hours} hours
+  GitHub: ✓ Synced (task checklist updated)
 
   📍 Workflow position: Tasks defined, ready to start work
 
-  ➡️  Next steps:
-     /pm:epic-start $ARGUMENTS      ← Create worktree & begin (recommended)
-     /pm:epic-sync $ARGUMENTS       ← Sync tasks to GitHub
-     /pm:epic-show $ARGUMENTS       ← View task list
+  ➡️  Next step:
+     /pm:epic-start $ARGUMENTS      ← Create worktree & begin
 
   🔄 Related:
-     /pm:epic-status                ← View all epics
+     /pm:epic-show $ARGUMENTS       ← View task list
      /pm:status                     ← Overall workflow status
 
 ═══════════════════════════════════════════════════════════════

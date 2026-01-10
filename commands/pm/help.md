@@ -64,9 +64,28 @@ Display:
     /pm:bugfix "Bug 1; Bug 2"   Multiple bugs
 
 ═══════════════════════════════════════════════════════════════
+  🧪 TESTING
+═══════════════════════════════════════════════════════════════
+
+  Testing command hierarchy (which to use when):
+
+  /pm:epic-verify <epic>       Orchestrator - REQUIRED before epic-close
+    ↳ Runs unit tests
+    ↳ Calls /testing:acceptance to generate E2E tests
+    ↳ Calls /testing:e2e to run E2E tests
+    ↳ Sets verified: true in epic frontmatter
+
+  /testing:acceptance <epic>   Generate Playwright tests from acceptance criteria
+  /testing:e2e [pattern]       Run existing Playwright tests
+
+  💡 For epics: Use /pm:epic-verify (handles everything)
+  💡 For standalone tests: Use /testing:e2e
+
+═══════════════════════════════════════════════════════════════
 
   💡 Skip prd-new if feature is already well-defined
   💡 Run /pm:init first to setup project.yaml (once per project)
+  💡 epic-verify is REQUIRED before epic-close (verification gate)
 ```
 
 ### If "Where Am I?"
