@@ -126,16 +126,11 @@ Rules in `rules/` define Claude's behavior:
 
 ## Acknowledgments & Influences
 
-This project builds upon and was influenced by several excellent tools and projects:
-
-| Project | Contribution |
-|---------|--------------|
-| [CCPM](https://github.com/automazeio/ccpm) | Original Claude Code Project Manager - the foundation this workflow system evolved from |
-| [Context7 MCP](https://github.com/upstash/context7) | Framework documentation fetching for best practices research |
-| [Episodic Memory MCP](https://github.com/anthropics/claude-code) | Conversation memory and search across sessions |
-| [Playwright](https://playwright.dev/) | E2E testing framework integration |
-| [ast-grep](https://ast-grep.github.io/) | AST-based code search patterns |
-| [GitHub CLI](https://cli.github.com/) | Issue and project board automation |
+| Project | Details |
+|---------|---------|
+| [CCPM](https://github.com/automazeio/ccpm) | Claude Code Project Manager - the original workflow system this evolved from |
+| [Compounding Engineering](https://github.com/EveryInc/every-marketplace/tree/main/plugins/compounding-engineering) | Agent patterns from the Every plugin marketplace |
+| [Episodic Memory MCP](https://github.com/erichung9060/episodic-memory-mcp) | Conversation memory and cross-session search |
 
 ## License
 
