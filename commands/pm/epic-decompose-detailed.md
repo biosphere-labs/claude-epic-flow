@@ -149,6 +149,31 @@ conflicts_with: []
 ## Description
 Clear, concise description of what needs to be done
 
+## COMMON MISTAKES - DO NOT MAKE THESE ERRORS
+❌ These are mistakes that cause task failure. Read carefully.
+
+### Path Mistakes
+- ❌ Creating `index.ts` in project root instead of `src/index.ts`
+- ❌ Creating `cli.ts` when spec says `src/index.ts`
+- ❌ Renaming files (e.g., `config-loader.js` instead of `src/config.ts`)
+- ❌ Using JavaScript (`.js`) when project uses TypeScript (`.ts`)
+
+### Configuration Mistakes
+- ❌ Omitting `"type": "module"` from package.json when ESM is required
+- ❌ Using CommonJS (`require`) when project uses ESM (`import`)
+- ❌ Wrong TypeScript version (e.g., ^4.9 when ^5.3 is specified)
+- ❌ Missing dependencies listed in the task
+
+### Structure Mistakes
+- ❌ Adding dependencies not specified (e.g., adding `commander` when not listed)
+- ❌ Creating your own file structure instead of following the spec
+- ❌ Typos in package names (e.g., `whispher` vs `whisper`)
+
+### Verification Mistakes
+- ❌ Running `npx <package-name>` for unpublished local packages (use `node dist/index.js`)
+- ❌ Skipping build step before testing
+- ❌ Not checking if output files exist after build
+
 ## CRITICAL CONSTRAINTS
 ⚠️ THESE RULES ARE MANDATORY - VIOLATION WILL CAUSE TASK FAILURE
 
@@ -304,70 +329,10 @@ export interface {Module}Response {
 }
 \`\`\`
 
-## REQUIRED TESTS
-🔴 Tests are MANDATORY. Task is NOT complete without passing tests.
+## TESTS - SKIP FOR NOW
+⚠️ Tests are handled separately after implementation. Do NOT write test files unless explicitly requested in the task.
 
-### Test File: `backend/src/{module}/services/{module}.service.spec.ts`
-\`\`\`typescript
-import { Test, TestingModule } from '@nestjs/testing';
-import { {Module}Service } from './{module}.service';
-import { DynamoDBService, DBKeys } from '../../storage';
-
-describe('{Module}Service', () => {
-  let service: {Module}Service;
-  let dynamoDBService: jest.Mocked<DynamoDBService>;
-
-  const mockUserId = 'user_123';
-
-  beforeEach(async () => {
-    const mockDynamoDBService = {
-      putItem: jest.fn(),
-      getItem: jest.fn(),
-      queryByPK: jest.fn(),
-      updateItem: jest.fn(),
-      deleteItem: jest.fn(),
-    };
-
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        {Module}Service,
-        { provide: DynamoDBService, useValue: mockDynamoDBService },
-      ],
-    }).compile();
-
-    service = module.get<{Module}Service>({Module}Service);
-    dynamoDBService = module.get(DynamoDBService);
-  });
-
-  describe('create', () => {
-    it('should create a {module} and return it', async () => {
-      dynamoDBService.putItem.mockResolvedValue(undefined);
-
-      const dto = { name: 'Test {Module}' };
-      const result = await service.create(mockUserId, dto);
-
-      expect(result.name).toBe('Test {Module}');
-      expect(result.id).toBeDefined();
-      expect(result.createdAt).toBeDefined();
-      expect(dynamoDBService.putItem).toHaveBeenCalledWith(
-        expect.objectContaining({
-          pk: expect.stringContaining('{MODULE}#'),
-          sk: 'META',
-          name: 'Test {Module}',
-          userId: mockUserId,
-        }),
-      );
-    });
-  });
-
-  // Add more tests for each method
-});
-\`\`\`
-
-### Minimum Test Coverage Required
-- [ ] Service: create, getById, list methods tested
-- [ ] Each method: success case and error case
-- [ ] Mocks verify correct DBKeys usage
+Focus only on implementation files. Tests will be added in a later phase.
 
 ## FILE CHECKLIST
 All files below MUST be created. Check off as you complete:
@@ -376,7 +341,6 @@ All files below MUST be created. Check off as you complete:
 - [ ] `backend/src/{module}/{module}.module.ts`
 - [ ] `backend/src/{module}/{module}.controller.ts`
 - [ ] `backend/src/{module}/services/{module}.service.ts`
-- [ ] `backend/src/{module}/services/{module}.service.spec.ts` ← TEST FILE REQUIRED
 - [ ] `backend/src/{module}/dto/{module}.dto.ts`
 - [ ] `backend/src/{module}/index.ts`
 
@@ -387,15 +351,29 @@ All files below MUST be created. Check off as you complete:
 ### Verification Commands
 After implementation, run these commands to verify:
 \`\`\`bash
-# Build check
-cd backend && pnpm build
+# Build check (adjust command based on project setup)
+npm run build
+# OR: pnpm build / yarn build
 
-# Run tests for this module
-cd backend && pnpm test -- --testPathPattern="{module}"
+# Verify build output exists
+ls -la dist/
 
-# Lint check
-cd backend && pnpm lint
+# Type check (if TypeScript)
+npm run typecheck
+# OR: npx tsc --noEmit
+
+# Test the built output directly (for CLI tools)
+node dist/index.js --help
+# OR: node dist/index.js --version
+
+# Lint check (if configured)
+npm run lint
 \`\`\`
+
+**IMPORTANT for CLI packages:**
+- Do NOT use `npx <package-name>` for local unpublished packages - it will fail
+- Use `node dist/index.js` to run the built output directly
+- Or use `npm link && <command>` to test the CLI locally
 
 ## Acceptance Criteria
 - [ ] Specific criterion 1
@@ -412,11 +390,11 @@ cd backend && pnpm lint
 - Parallel: true/false
 
 ## Definition of Done
-- [ ] All files in FILE CHECKLIST created
-- [ ] All tests written and passing
-- [ ] Build passes without errors
-- [ ] Lint passes without errors
+- [ ] All files in FILE CHECKLIST created at EXACT paths specified
+- [ ] Build passes without errors (`npm run build`)
+- [ ] Type check passes (`npm run typecheck` or `npx tsc --noEmit`)
 - [ ] All CRITICAL CONSTRAINTS followed
+- [ ] No files created outside specified paths
 ```
 
 ### Phase 4: Task Analysis for Pattern Selection
