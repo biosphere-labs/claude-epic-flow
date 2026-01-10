@@ -407,9 +407,9 @@ For each bug (up to 5 concurrent), use Task tool:
 **CRITICAL: Every bugfix MUST produce a regression test file.**
 
 For each fixed bug, write a Playwright test that:
-- Would have **failed** before the fix (proves the bug existed)
-- **Passes** after the fix (proves it's fixed)
-- Becomes part of the permanent test suite
+- Covers the **exact bug scenario** (same steps that triggered the bug)
+- **Passes** with the fix in place
+- Will **catch regressions** if the same bug is reintroduced
 
 1. **Create regression test file:**
    ```bash
