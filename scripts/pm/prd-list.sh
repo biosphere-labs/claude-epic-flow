@@ -1,6 +1,6 @@
 # !/bin/bash
 # Check if PRD directory exists
-if [ ! -d ".claude/prds" ]; then
+if [ ! -d "workflow/prds" ]; then
   echo "📁 No PRD directory found. Create your first PRD with: /pm:prd-new <feature-name>"
   exit 0
 fi
