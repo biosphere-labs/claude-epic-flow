@@ -25,7 +25,7 @@ Before any research or user interaction, load project context:
    ```bash
    ls -la workflow/context/*.md 2>/dev/null | wc -l
    ```
-   - If 0 files: Tell user "❌ No context found. Run /ccpmcontext:create first." and stop.
+   - If 0 files: Tell user "❌ No context found. Run /context:create first." and stop.
 
 2. **Load context files in order:**
    - Read `workflow/context/project-overview.md` - Project understanding
@@ -230,7 +230,7 @@ fi
 **1. Check Remote Repository:**
 ```bash
 remote_url=$(git remote get-url origin 2>/dev/null || echo "")
-if [[ "$remote_url" == *"automazeio/ccpm"* ]]; then
+if [[ "$remote_url" == *"biosphere-labs/claude-code-for-solo-founder"* ]]; then
   echo "⚠️ Skipping GitHub sync (template repo)"
   # Skip sync but continue
 elif [ -z "$GITHUB_REPO" ]; then

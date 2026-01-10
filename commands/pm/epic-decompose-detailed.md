@@ -33,7 +33,7 @@ Before any research or user interaction, load project context:
    ```bash
    ls -la workflow/context/*.md 2>/dev/null | wc -l
    ```
-   - If 0 files: Tell user "❌ No context found. Run /ccpmcontext:create first." and stop.
+   - If 0 files: Tell user "❌ No context found. Run /context:create first." and stop.
 
 2. **Load context files in order:**
    - Read `workflow/context/project-overview.md` - Project understanding
