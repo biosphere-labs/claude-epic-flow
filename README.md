@@ -120,21 +120,14 @@ Tools and MCP servers used by the workflow:
 |------|---------|---------|
 | [GitHub CLI](https://cli.github.com/) | Issue/PR automation, project boards | `brew install gh` then `gh auth login` |
 | [Episodic Memory MCP](https://github.com/erichung9060/episodic-memory-mcp) | Conversation memory across sessions | `claude mcp add episodic-memory` |
+| [Context7 MCP](https://github.com/upstash/context7) | Framework docs for best practices research | `claude mcp add context7` |
 
 ### Recommended
 
 | Tool | Purpose | Install |
 |------|---------|---------|
 | [ast-grep](https://ast-grep.github.io/) | Structural code search (25+ languages) | `cargo install ast-grep --locked` |
-| [Playwright](https://playwright.dev/) | E2E testing | `npx playwright install` |
-| [Playwright MCP](https://github.com/anthropics/anthropic-quickstarts/tree/main/mcp-servers/playwright) | Browser automation for tests | `claude mcp add playwright` |
-| [gum](https://github.com/charmbracelet/gum) | Interactive CLI prompts | `brew install gum` |
-
-### Optional
-
-| Tool | Purpose | Install |
-|------|---------|---------|
-| [Context7 MCP](https://github.com/upstash/context7) | Framework documentation lookup | `claude mcp add context7` |
+| [Playwright](https://playwright.dev/) | E2E testing framework | `npm install -D playwright && npx playwright install` |
 
 ## Installation
 
