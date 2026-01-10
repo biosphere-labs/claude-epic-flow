@@ -119,7 +119,7 @@ if [ "$FRONTEND_CHANGED" = true ]; then
 fi
 ```
 
-### Phase 3: Generate Missing E2E Tests
+### Phase 3: Generate E2E Tests from Acceptance Criteria
 
 Call `/testing:acceptance` to generate Playwright tests from the epic's acceptance criteria:
 
@@ -133,6 +133,36 @@ This will:
 - Read acceptance criteria from `workflow/epics/$ARGUMENTS/epic.md` and task files
 - Generate Playwright test files at `frontend/e2e/{epic}.spec.ts`
 - Validate the generated tests pass
+
+### Phase 3.5: Commit Generated Tests
+
+**CRITICAL: Generated tests must be committed to become permanent regression tests.**
+
+```bash
+cd $WORK_DIR
+
+# Check for new/modified test files
+NEW_TESTS=$(git status --porcelain frontend/e2e/*.spec.ts 2>/dev/null | wc -l)
+
+if [ "$NEW_TESTS" -gt 0 ]; then
+  echo "Committing $NEW_TESTS generated test file(s)..."
+  git add frontend/e2e/*.spec.ts
+  git commit -m "test(e2e): add acceptance tests for $ARGUMENTS
+
+Generated from acceptance criteria in epic.
+These tests verify feature requirements and serve as regression tests."
+  echo "✅ Tests committed to epic branch"
+else
+  echo "ℹ️ No new test files to commit"
+fi
+
+cd - > /dev/null
+```
+
+These tests now:
+- Are part of the epic branch (merged with feature code)
+- Run in CI on every PR going forward
+- Catch regressions if the feature breaks
 
 ### Phase 4: Run E2E Tests
 
@@ -181,6 +211,14 @@ e2e_tests_passed: {true|false}
 **Result:** {PASS/FAIL}
 - Tests run: {count}
 - Passed: {count}
+
+## Generated Regression Tests
+
+| Test File | Tests | Source |
+|-----------|-------|--------|
+| `frontend/e2e/{epic}.spec.ts` | {count} | Acceptance criteria |
+
+These tests are now committed to the epic branch and will run in CI.
 
 ## Overall Result
 
