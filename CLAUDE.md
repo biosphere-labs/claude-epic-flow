@@ -1,0 +1,2 @@
+- When you use Brave Websearch you can only make one call per second and if you try and make more you'll get a rate limiting error. Only ever make one call per second.
+- I'm using dictation and there are dictation errors so rather than making assumptions ask questions if there are dictation errors that don't make sense in context.
