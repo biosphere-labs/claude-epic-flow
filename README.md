@@ -110,6 +110,13 @@ Rules in `rules/` define Claude's behavior:
 - `testing-philosophy.md` - Integration over mocks
 - `agent-coordination.md` - Parallel agent work
 
+## Compatible Projects
+
+These tools are designed to integrate seamlessly with this workflow:
+
+- [Claude Code Scheduler](https://github.com/biosphere-labs/claude-code-scheduler)
+- [Epic Executor](https://github.com/biosphere-labs/epic-executor)
+
 ## Dependencies
 
 Tools and MCP servers used by the workflow:
@@ -130,6 +137,8 @@ Tools and MCP servers used by the workflow:
 | [Playwright](https://playwright.dev/) | E2E testing framework | `npm install -D playwright && npx playwright install` |
 
 ## Installation
+
+__ Designed to work with [Claude Code Scheduler](https://github.com/biosphere-labs/claude-code-scheduler) __
 
 1. Clone to `~/.claude/`:
    ```bash
