@@ -1,10 +1,10 @@
 ---
-allowed-tools: Bash, Read, Write, LS, Skill, AskUserQuestion
+allowed-tools: Bash, Read, Write, LS, Skill
 ---
 
 # Epic All
 
-Run the complete epic workflow from creation to close in a single command.
+Run the complete epic workflow from creation to close autonomously. No user interaction required unless a critical failure occurs.
 
 ## Usage
 ```
@@ -13,13 +13,16 @@ Run the complete epic workflow from creation to close in a single command.
 
 ## What This Command Does
 
-Orchestrates the full epic lifecycle:
+Orchestrates the full epic lifecycle **autonomously**:
 
 ```
 epic-create → epic-decompose → epic-sync → epic-start → epic-verify → epic-close
 ```
 
-Handles error states and resumes from the current position if interrupted.
+- Runs without user interaction
+- Handles minor issues autonomously
+- Only stops on critical failures (verification fails, merge conflicts)
+- Resumes from current position if interrupted
 
 ## Phase Detection
 
@@ -116,34 +119,13 @@ if [ "$CURRENT_PHASE" = "create" ] || [ "$CURRENT_PHASE" = "decompose" ]; then
 fi
 ```
 
-Ask which decomposition style to use:
-
 ```yaml
-AskUserQuestion:
-  questions:
-    - question: "Which task decomposition format?"
-      header: "Task Format"
-      options:
-        - label: "Standard (Recommended)"
-          description: "Standard task format for Claude Code execution"
-        - label: "Detailed (External Agents)"
-          description: "Extra detail for external models like Llama/DeepSeek"
-      multiSelect: false
-```
-
-Then call the appropriate skill:
-
-```yaml
-# If Standard selected:
 Skill:
   skill: "pm:epic-decompose"
   args: "$ARGUMENTS"
-
-# If Detailed selected:
-Skill:
-  skill: "pm:epic-decompose-detailed"
-  args: "$ARGUMENTS"
 ```
+
+Note: For external agent execution (Llama, DeepSeek, etc.), use `/pm:epic-decompose-detailed` separately.
 
 ### Phase 3: Sync to GitHub
 
@@ -287,8 +269,9 @@ The command will:
 
 - **PRD First?** If you have a PRD, run `/pm:prd-new` before this command.
   epic-create will pick up the PRD automatically.
-- **Interactive Steps:** Some phases (epic-create simplicity review, epic-close archive)
-  may prompt for user input.
+- **Fully Autonomous:** Runs without user interaction. Only stops on critical failures.
 - **Long Running:** epic-start orchestrates task execution which can take significant time.
 - **GitHub Optional:** If `.claude/project.yaml` isn't configured, GitHub sync is skipped.
 - **Merge to Staging:** epic-close merges to staging, not main. Deploy to production separately.
+- **External Agents:** For execution via external models (Llama, DeepSeek), use
+  `/pm:epic-decompose-detailed` instead of this command.
