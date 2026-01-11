@@ -138,8 +138,6 @@ Tools and MCP servers used by the workflow:
 
 ## Installation
 
-__ Designed to work with [Claude Code Scheduler](https://github.com/biosphere-labs/claude-code-scheduler) __
-
 1. Clone to `~/.claude/`:
    ```bash
    git clone git@github.com:biosphere-labs/claude-epic-flow.git ~/.claude
