@@ -47,7 +47,7 @@ If project.yaml exists, ask user if they want to reconfigure.
 ### 2. Gather Project Name
 
 Use `AskUserQuestion` to get the project name:
-- Ask for a short identifier (e.g., "my-app", "weave")
+- Ask for a short identifier (e.g., "my-app", "acme-api")
 - This is used for display and API integrations
 
 ### 3. Setup Git & GitHub (Optional)

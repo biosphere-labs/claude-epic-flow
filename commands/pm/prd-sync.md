@@ -13,7 +13,7 @@ Sync existing PRDs to GitHub as Backlog issues on the project Kanban board.
 
 **Arguments:**
 - No argument: Lists all PRDs and their sync status
-- PRD name: Syncs that specific PRD (e.g., `weave-transcript-extension`)
+- PRD name: Syncs that specific PRD (e.g., `user-authentication`)
 
 ## Project Configuration
 
