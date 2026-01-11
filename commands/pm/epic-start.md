@@ -185,18 +185,43 @@ Task:
     1. Read full task details from the file
     2. Implement according to acceptance criteria
     3. Commit frequently: "Task {task_num}: {change}"
-    4. When complete, update task status to "closed"
-    5. Follow /rules/agent-coordination.md for parallel work
+    4. Follow /rules/agent-coordination.md for parallel work
 
-    On completion, the orchestrator will:
-    - Update task status to closed
-    - Auto-sync epic to GitHub via /pm:epic-sync
+    CRITICAL - When task is complete:
+    You MUST persist the status change to the task file using this exact command:
+    ```bash
+    sed -i 's/^status: open/status: closed/' workflow/epics/$ARGUMENTS/{task_num}.md
+    sed -i 's/^status: in-progress/status: closed/' workflow/epics/$ARGUMENTS/{task_num}.md
+    ```
+    Do NOT rely on TodoWrite - that is only for UI display, it does not persist to disk.
+    The orchestrator detects completion by reading the task file, not TodoWrite.
 ```
 
 ### 8. Monitor and Coordinate
 
 As tasks complete:
-- Detect completion (status: closed in frontmatter)
+
+```bash
+# Check task status and ensure it's persisted
+for task in workflow/epics/$ARGUMENTS/[0-9][0-9][0-9].md; do
+  task_num=$(basename "$task" .md)
+  status=$(grep '^status:' "$task" | sed 's/status: *//')
+
+  # If agent completed the work but forgot to update status, fix it
+  # (Check git log in worktree for commits mentioning this task)
+  if [ "$status" = "open" ] || [ "$status" = "in-progress" ]; then
+    # Check if task has commits in worktree
+    commits=$(cd .worktrees/epic/$ARGUMENTS && git log --oneline --grep="Task $task_num" 2>/dev/null | wc -l)
+    if [ "$commits" -gt 0 ]; then
+      echo "⚠️  Task $task_num has $commits commits but status is '$status' - fixing..."
+      sed -i 's/^status: open/status: closed/' "$task"
+      sed -i 's/^status: in-progress/status: closed/' "$task"
+    fi
+  fi
+done
+```
+
+After status updates:
 - **Automatically sync** via `/pm:epic-sync $ARGUMENTS` to update GitHub checkboxes
 - Check if blocked tasks are now ready
 - Launch newly-ready tasks
