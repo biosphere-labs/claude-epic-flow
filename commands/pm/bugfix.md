@@ -396,19 +396,20 @@ For each bug (up to 5 concurrent), use Task tool:
 
 **CRITICAL: Every bugfix MUST produce a regression test file.**
 
-**CRITICAL: NO MOCKS IN E2E TESTS.** See `/rules/testing-philosophy.md`.
+**Prefer real calls over mocks.** See `/rules/testing-philosophy.md`.
 
-E2E regression tests must:
+E2E regression tests should:
 - Make real HTTP calls to the local backend (running against staging/test database)
 - Use real authentication flows
 - Interact with real services
-- NEVER use jest.mock, mockResolvedValue, or any mocking
+
+**Exception:** Mock expensive external calls (>$1/run) like paid LLM APIs. Document why.
 
 For each fixed bug, write a Playwright test that:
 - Covers the **exact bug scenario** (same steps that triggered the bug)
 - **Passes** with the fix in place
 - Will **catch regressions** if the same bug is reintroduced
-- Uses REAL backend calls (no mocks)
+- Uses real backend calls (mock only expensive external APIs)
 
 1. **Create regression test file:**
    ```bash

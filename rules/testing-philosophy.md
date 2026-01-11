@@ -8,11 +8,11 @@ Guidelines for writing tests that provide real confidence without false security
 
 When you mock, you're often testing the mock, not the code. Integration tests verify actual behavior.
 
-## E2E Tests: NEVER Use Mocks
+## E2E Tests: Strongly Prefer Real Calls
 
-**This is non-negotiable: E2E tests must NEVER contain mocks.**
+**E2E tests should use real API calls, not mocks.** The whole point of E2E testing is verifying the complete system works together.
 
-E2E (end-to-end) tests exist to verify the complete system works together. Adding mocks defeats the entire purpose:
+**Exception:** Use mocks when real calls have significant cost (>$1 per test run) - e.g., paid APIs, LLM calls, or external services that charge per request. In these cases, mock the expensive call but document why.
 
 ```typescript
 // ❌ WRONG - This is pointless
@@ -26,11 +26,18 @@ const user = await response.json();
 expect(user.name).toBe('Test User');
 ```
 
-### Why Mocks in E2E Are Pointless
+### Why Mocks in E2E Are Usually Pointless
 
 1. **You're testing the mock, not the code** - A mock always returns what you told it to. That proves nothing.
 2. **Real bugs hide in real integrations** - Database queries, API serialization, auth flows - mocks skip all of this.
 3. **False confidence** - Tests pass, you deploy, production breaks. The mock lied to you.
+
+**When mocks ARE appropriate in E2E:**
+- External paid APIs where each call costs money (LLM APIs, payment processors in non-sandbox mode)
+- Rate-limited services that would block CI/CD
+- Third-party services with no test/sandbox environment
+
+When you do mock, add a comment explaining why the real call isn't feasible.
 
 ### What E2E Tests Should Do
 
@@ -178,20 +185,29 @@ expect(await service.getData()).toEqual(expectedData);
 // This test is worthless
 ```
 
-### ❌ Mocks in E2E Tests
+### ❌ Mocking Internal APIs in E2E Tests
 ```typescript
-// NEVER do this in E2E tests
+// Bad: Mocking your own backend defeats E2E purpose
 beforeEach(() => {
   jest.mock('../api/client');
   mockClient.fetchData.mockResolvedValue(testData);
 });
 
 test('displays data', async ({ page }) => {
-  // This test proves NOTHING - the real API could be completely broken
+  // This proves NOTHING - the real API could be completely broken
   await page.goto('/dashboard');
   await expect(page.locator('.data')).toBeVisible();
 });
-// The mock bypasses all real integration - database, auth, serialization, network
+// The mock bypasses database, auth, serialization, network - all the things that break
+```
+
+### ✅ Acceptable: Mocking Expensive External APIs
+```typescript
+// OK: Mocking a paid LLM API to avoid $$ per test run
+jest.mock('../services/openai', () => ({
+  generateSummary: jest.fn().mockResolvedValue('Mock summary')
+  // Real call costs $0.05 each, would add up in CI
+}));
 ```
 
 ## Building the Regression Suite
