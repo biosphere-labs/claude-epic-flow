@@ -168,12 +168,43 @@ done
 
 ### 7. Execute Tasks (Orchestration)
 
-Launch parallel agents for ready tasks:
+#### Model Selection
+
+Choose the appropriate model based on task complexity:
+
+```bash
+# Determine model for each task based on content
+for task in workflow/epics/$ARGUMENTS/[0-9][0-9][0-9].md; do
+  task_name=$(grep '^name:' "$task" | sed 's/name: *//' | tr '[:upper:]' '[:lower:]')
+  task_content=$(cat "$task")
+
+  # Haiku: Documentation, config, simple updates
+  if echo "$task_name" | grep -qiE "(doc|readme|config|update.*env|cleanup)"; then
+    MODEL="haiku"
+  # Sonnet: Standard code implementation
+  elif echo "$task_content" | grep -qiE "(create.*component|add.*endpoint|implement.*service|write.*test)"; then
+    MODEL="sonnet"
+  # Opus: Complex architecture, multi-file refactoring, integration
+  elif echo "$task_content" | grep -qiE "(refactor|architect|integrat|redesign|multi.*file|complex)"; then
+    MODEL="opus"
+  else
+    # Default to sonnet for code tasks
+    MODEL="sonnet"
+  fi
+
+  echo "Task $(basename $task .md): Using $MODEL"
+done
+```
+
+#### Launch Agents
+
+Launch parallel agents for ready tasks with appropriate model:
 
 ```yaml
 Task:
   description: "Execute task {task_num} for epic $ARGUMENTS"
   subagent_type: "general-purpose"
+  model: "{MODEL}"  # haiku, sonnet, or opus based on complexity
   run_in_background: true
   prompt: |
     Execute task {task_num} in epic $ARGUMENTS
@@ -196,6 +227,11 @@ Task:
     Do NOT rely on TodoWrite - that is only for UI display, it does not persist to disk.
     The orchestrator detects completion by reading the task file, not TodoWrite.
 ```
+
+**Model Guidelines:**
+- **haiku**: Docs, READMEs, config changes, simple cleanup (~$0.25/M input)
+- **sonnet**: Component creation, service implementation, tests (~$3/M input)
+- **opus**: Complex refactoring, architecture, multi-system integration (~$15/M input)
 
 ### 8. Monitor and Coordinate
 
