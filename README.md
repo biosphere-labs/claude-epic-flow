@@ -1,168 +1,61 @@
 # Claude Epic Flow
 
-An epic-driven project management and workflow system for Claude Code.
+Epic-driven project management for Claude Code.
 
-## Overview
+## What It Does
 
-This repository contains custom commands, rules, and agents that extend Claude Code with:
+- **PRD → Epic → Tasks → Code → Tests → Merge** - complete feature workflow
+- **Automatic GitHub sync** - issues, checklists, project boards
+- **Worktree isolation** - parallel development without pollution
+- **Verification gates** - tests must pass before merge
 
-- **Project Management (PM) Workflow** - End-to-end feature development from PRD to deployment
-- **Bug Tracking** - Observe, analyze, fix, and sync bugs to GitHub
-- **Testing Integration** - E2E testing with Playwright, acceptance test generation
-- **GitHub Sync** - Automatic sync to GitHub Issues and Project boards
+## Quick Start
 
-## Directory Structure
+```bash
+# 1. Clone to ~/.claude/
+git clone git@github.com:biosphere-labs/claude-epic-flow.git ~/.claude
+
+# 2. Install minimum dependencies
+brew install gh && gh auth login
+claude mcp add episodic-memory
+
+# 3. Initialize your project
+cd your-project
+claude
+> /pm:init
+```
+
+## Core Commands
 
 ```
-.claude/
-├── commands/           # Custom slash commands
-│   ├── pm/            # Project management commands
-│   ├── testing/       # Testing commands
-│   └── context/       # Context management
-├── rules/             # Behavioral rules for Claude
-├── agents/            # Specialized agent definitions
-├── hooks/             # Git and lifecycle hooks
-├── scripts/           # Helper scripts
-└── plugins/           # Plugin configurations
-```
-
-## PM Workflow Commands
-
-### Feature Development
-
-```
-/pm:init                    # Initialize project (once per project)
-/pm:prd-new <name>          # Create PRD via Socratic questioning
-/pm:epic-create <name>      # Create implementation epic
+/pm:epic-create <name>      # Start a feature
 /pm:epic-decompose <name>   # Break into tasks
-/pm:epic-start <name>       # Create worktree + start dev servers
-/pm:epic-verify <name>      # Run tests (REQUIRED before close)
-/pm:epic-close <name>       # Merge to staging + cleanup
-```
+/pm:epic-start <name>       # Create worktree, begin work
+/pm:epic-verify <name>      # Run tests
+/pm:epic-close <name>       # Merge + cleanup
 
-### Bug Fixing
-
-```
-/pm:bugfix <observation>    # All-in-one bug fix workflow
-/pm:bug-observe <desc>      # Create detailed bug report
-```
-
-### Status & Help
-
-```
+/pm:bugfix <observation>    # All-in-one bug fix
 /pm:help                    # Interactive help
-/pm:status                  # Current workflow status
-/pm:in-progress             # Show active work
 ```
 
-## Key Features
+## Documentation
 
-### Automatic GitHub Sync
-
-All state changes automatically sync to GitHub:
-- Epic creation → GitHub Issue created
-- Task completion → Checklist updated
-- Bug reports → Issue + Kanban board placement
-
-### Verification Gate
-
-`/pm:epic-close` requires verification:
-- Must run `/pm:epic-verify` first
-- Sets `verified: true` in epic frontmatter
-- Ensures all tests pass before merge
-
-### Testing Hierarchy
-
-| Command | Purpose |
-|---------|---------|
-| `/pm:epic-verify` | Orchestrator - runs all tests |
-| `/testing:acceptance` | Generate E2E tests from criteria |
-| `/testing:e2e` | Run Playwright tests |
-
-### Worktree-Based Development
-
-Epics run in isolated git worktrees:
-- No pollution of main checkout
-- Parallel development possible
-- Automatic dependency copying
-
-## Project Configuration
-
-Each project needs `.claude/project.yaml`:
-
-```yaml
-github:
-  repo: "owner/repo"
-
-project_board:
-  project_number: 1
-  project_owner: "owner"
-  # ... status field IDs
-```
-
-Run `/pm:init` to auto-configure.
-
-## Rules
-
-Rules in `rules/` define Claude's behavior:
-- `workflow-sequence.md` - Valid command sequences
-- `worktree-operations.md` - Git worktree patterns
-- `testing-philosophy.md` - Integration over mocks
-- `agent-coordination.md` - Parallel agent work
+- [Commands Reference](docs/commands.md) - all slash commands
+- [Configuration](docs/configuration.md) - project setup and rules
+- [Dependencies](docs/dependencies.md) - required and recommended tools
+- [System Context](docs/system-context.md) - context for Claude agents
 
 ## Compatible Projects
-
-These tools are designed to integrate seamlessly with this workflow:
 
 - [Claude Code Scheduler](https://github.com/biosphere-labs/claude-code-scheduler)
 - [Epic Executor](https://github.com/biosphere-labs/epic-executor)
 
-## Dependencies
-
-Tools and MCP servers used by the workflow:
-
-### Required
-
-| Tool | Purpose | Install |
-|------|---------|---------|
-| [GitHub CLI](https://cli.github.com/) | Issue/PR automation, project boards | `brew install gh` then `gh auth login` |
-| [Episodic Memory MCP](https://github.com/erichung9060/episodic-memory-mcp) | Conversation memory across sessions | `claude mcp add episodic-memory` |
-| [Context7 MCP](https://github.com/upstash/context7) | Framework docs for best practices research | `claude mcp add context7` |
-
-### Recommended
-
-| Tool | Purpose | Install |
-|------|---------|---------|
-| [ast-grep](https://ast-grep.github.io/) | Structural code search (25+ languages) | `cargo install ast-grep --locked` |
-| [Playwright](https://playwright.dev/) | E2E testing framework | `npm install -D playwright && npx playwright install` |
-
-## Installation
-
-1. Clone to `~/.claude/`:
-   ```bash
-   git clone git@github.com:biosphere-labs/claude-epic-flow.git ~/.claude
-   ```
-
-2. Install dependencies (at minimum):
-   ```bash
-   brew install gh && gh auth login
-   cargo install ast-grep --locked
-   claude mcp add episodic-memory
-   ```
-
-3. Initialize your project:
-   ```bash
-   cd your-project
-   claude
-   > /pm:init
-   ```
-
-## Acknowledgments & Influences
+## Acknowledgments
 
 | Project | Details |
 |---------|---------|
-| [CCPM](https://github.com/automazeio/ccpm) | Claude Code Project Manager - the original workflow system this evolved from |
-| [Compounding Engineering](https://github.com/EveryInc/every-marketplace/tree/main/plugins/compounding-engineering) | Agent patterns from the Every plugin marketplace |
+| [CCPM](https://github.com/automazeio/ccpm) | Original workflow system this evolved from |
+| [Compounding Engineering](https://github.com/EveryInc/every-marketplace/tree/main/plugins/compounding-engineering) | Agent patterns |
 
 ## License
 

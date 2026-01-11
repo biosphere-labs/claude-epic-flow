@@ -33,8 +33,13 @@ episodic-memory/
 # Search index
 .search-index/
 
+# Project-specific workflow data (PRDs, epics, bugfixes)
+workflow/
+
 # Cache files
 stats-cache.json
 settings.json
 plugins/
+
+# System context is project-specific, not committed
 docs/system-context.md

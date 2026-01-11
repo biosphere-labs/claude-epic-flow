@@ -1,21 +1,27 @@
 ---
-allowed-tools: Bash, Read, Write, Task, mcp__playwright__browser_navigate, mcp__playwright__browser_snapshot, mcp__playwright__browser_click, mcp__playwright__browser_take_screenshot
+allowed-tools: Bash, Read, Write, Task, mcp__playwright-cdp__browser_navigate, mcp__playwright-cdp__browser_snapshot, mcp__playwright-cdp__browser_click, mcp__playwright-cdp__browser_take_screenshot, mcp__playwright-cdp__browser_type, mcp__playwright-cdp__browser_console_messages, mcp__playwright-cdp__browser_network_requests
 ---
 
 # E2E Testing with Playwright
 
 Run end-to-end tests with Playwright. Supports two modes:
 - **Attached Chromium**: Standard mode, isolated browser instance
-- **Google Profile**: Uses existing Chrome profile with auth and extensions
+- **Google Profile (CDP)**: Connects to existing Chrome with auth and extensions
+
+## IMPORTANT: MCP Tool Selection
+
+**For Google Profile mode, use `mcp__playwright-cdp__*` tools** (CDP = Chrome DevTools Protocol).
+
+Do NOT use `mcp__playwright__*` tools for profile mode - those launch an isolated browser that won't have your auth or extensions.
+
+| Mode | MCP Tools | Why |
+|------|-----------|-----|
+| Chromium (isolated) | `mcp__playwright__*` | Launches fresh browser |
+| Google Profile | `mcp__playwright-cdp__*` | Connects to existing Chrome |
 
 ## Prefer Real Calls Over Mocks
 
 **E2E tests should use real API calls, not mocks.** See `/rules/testing-philosophy.md`.
-
-E2E tests verify the complete system works together. Tests should:
-- Call real backend APIs (running locally against staging/test database)
-- Use real authentication flows
-- Interact with real services
 
 **Exception:** Mock expensive external calls (>$1/run) like paid LLM APIs. Document why when you do.
 
@@ -33,7 +39,7 @@ E2E tests verify the complete system works together. Tests should:
 
 ## Mode Selection
 
-Use `AskUserQuestion` for interactive mode selection, or specify mode via argument.
+Use `AskUserQuestion` for interactive mode selection.
 
 ```bash
 # Or specify explicitly
@@ -41,9 +47,7 @@ Use `AskUserQuestion` for interactive mode selection, or specify mode via argume
 /testing:e2e --mode=profile
 ```
 
-## Mode Details
-
-### Mode 1: Attached Chromium (Default)
+## Mode 1: Attached Chromium (Default)
 
 Standard Playwright mode. Opens isolated Chromium instance.
 
@@ -53,57 +57,78 @@ Standard Playwright mode. Opens isolated Chromium instance.
 - Running in CI/CD
 - Speed is priority
 
-**Configuration:**
-```typescript
-// playwright.config.ts (default)
-use: {
-  browserName: 'chromium',
-  headless: false,  // Set true for CI
-}
-```
-
 **Run:**
 ```bash
+cd frontend
 npx playwright test
 # or with UI
 npx playwright test --ui
 ```
 
-### Mode 2: Google Profile (Auth + Extensions)
+## Mode 2: Google Profile (Auth + Extensions)
 
-Connects to existing Chrome instance with your Google profile.
+Connects to existing Chrome instance via CDP (Chrome DevTools Protocol).
 
 **Use when:**
 - Testing Chrome extension functionality
-- Testing with real Google authentication (Firebase Auth)
-- Testing features that require logged-in state
-- Debugging extension interactions
+- Testing with real Google/Firebase authentication
+- Testing features requiring logged-in state
+- Manual E2E verification of deployed apps
 
-**Prerequisites:**
-1. Close all Chrome windows
-2. Start Chrome with remote debugging:
+### The Profile Problem
 
+Chrome cannot share its default profile directory while also running with remote debugging. You have two options:
+
+**Option A: Copy profile to temp location (RECOMMENDED)**
 ```bash
-# macOS
-/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
-  --remote-debugging-port=9222 \
-  --user-data-dir="$HOME/Library/Application Support/Google/Chrome"
+# 1. Close Chrome completely
+pkill -f chrome
 
-# Linux
+# 2. Copy your profile (adjust profile name - check chrome://version for "Profile Path")
+mkdir -p /tmp/chrome-debug
+cp -r "$HOME/.config/google-chrome/Default" /tmp/chrome-debug/
+
+# 3. Start Chrome with the copied profile
+google-chrome \
+  --remote-debugging-port=9222 \
+  --user-data-dir="/tmp/chrome-debug"
+```
+
+**Option B: Close Chrome entirely and use original**
+```bash
+# 1. Close ALL Chrome windows and processes
+pkill -f chrome
+
+# 2. Start Chrome with debugging (will be only Chrome instance)
 google-chrome \
   --remote-debugging-port=9222 \
   --user-data-dir="$HOME/.config/google-chrome"
-
-# Windows
-"C:\Program Files\Google\Chrome\Application\chrome.exe" ^
-  --remote-debugging-port=9222 ^
-  --user-data-dir="%LOCALAPPDATA%\Google\Chrome\User Data"
 ```
 
-3. Log into Google/Firebase in Chrome if needed
-4. Install/enable your extension if testing extension
+### Verify Connection
 
-**Configuration:**
+```bash
+curl -s http://localhost:9222/json/version | jq .
+# Should show Browser, webSocketDebuggerUrl, etc.
+```
+
+### Using CDP MCP Tools
+
+Once Chrome is running with debugging, use the CDP tools:
+
+```bash
+# Take a snapshot of current page
+mcp__playwright-cdp__browser_snapshot
+
+# Navigate
+mcp__playwright-cdp__browser_navigate url="https://example.com"
+
+# Click (use ref from snapshot)
+mcp__playwright-cdp__browser_click element="Submit button" ref="submit-btn-ref"
+```
+
+### Programmatic Test Configuration
+
 ```typescript
 // playwright.config.ts or test file
 import { chromium } from 'playwright';
@@ -113,12 +138,6 @@ const context = browser.contexts()[0];  // Use existing context
 const page = context.pages()[0] || await context.newPage();
 ```
 
-**Run:**
-```bash
-# Custom script for profile mode
-npx playwright test --config=playwright.profile.config.ts
-```
-
 ## Instructions
 
 ### 1. Determine Mode
@@ -126,7 +145,6 @@ npx playwright test --config=playwright.profile.config.ts
 Check if test requires authentication or extension:
 
 ```bash
-# Check test file for extension or auth requirements
 grep -l "extension\|chrome\|auth\|login\|firebase" frontend/e2e/*.spec.ts
 ```
 
@@ -134,7 +152,7 @@ If matches found or user specified `--extension`, use Google Profile mode.
 
 ### 2. Interactive Mode Selection
 
-Use `AskUserQuestion` tool to prompt for mode selection:
+Use `AskUserQuestion` tool:
 
 ```yaml
 AskUserQuestion:
@@ -144,28 +162,30 @@ AskUserQuestion:
       options:
         - label: "Chromium (isolated)"
           description: "Standard mode, fast, works in CI"
-        - label: "Google Profile"
+        - label: "Google Profile (CDP)"
           description: "Uses existing Chrome with auth and extensions"
 ```
 
-Based on response, set `USE_PROFILE=true` for Google Profile mode.
-
 ### 3. Setup for Google Profile Mode
 
-If using Google Profile mode:
+If using Google Profile mode, guide user through setup:
 
-```bash
-echo "📍 Google Profile Mode Setup"
-echo ""
-echo "1. Close all Chrome windows"
-echo "2. Run this command to start Chrome with debugging:"
-echo ""
-echo "   google-chrome --remote-debugging-port=9222 --user-data-dir=\"\$HOME/.config/google-chrome\""
-echo ""
-echo "3. Wait for Chrome to open, then log in if needed"
+```
+📍 Google Profile Mode Setup
+
+1. Close all Chrome windows: pkill -f chrome
+
+2. Copy your profile (keeps original Chrome usable later):
+   mkdir -p /tmp/chrome-debug
+   cp -r "$HOME/.config/google-chrome/Default" /tmp/chrome-debug/
+
+3. Start Chrome with debugging:
+   google-chrome --remote-debugging-port=9222 --user-data-dir="/tmp/chrome-debug"
+
+4. Log in to required services if needed (Firebase, Google, etc.)
 ```
 
-Use `AskUserQuestion` to confirm Chrome is ready:
+Confirm Chrome is ready:
 
 ```yaml
 AskUserQuestion:
@@ -175,19 +195,13 @@ AskUserQuestion:
       options:
         - label: "Yes, Chrome is ready"
           description: "Continue with tests"
-        - label: "No, need to start Chrome"
-          description: "Show setup instructions again"
+        - label: "No, need help"
+          description: "Show troubleshooting"
 ```
 
-Then verify connection:
-
+Verify:
 ```bash
-curl -s http://localhost:9222/json/version > /dev/null || {
-  echo "❌ Cannot connect to Chrome on port 9222"
-  echo "   Make sure Chrome is running with --remote-debugging-port=9222"
-  exit 1
-}
-echo "✅ Connected to Chrome"
+curl -s http://localhost:9222/json/version > /dev/null && echo "✅ Connected to Chrome" || echo "❌ Cannot connect"
 ```
 
 ### 4. Run Tests
@@ -196,13 +210,11 @@ echo "✅ Connected to Chrome"
 cd frontend
 
 if [ "$USE_PROFILE" = true ]; then
-  # Google Profile mode
-  echo "🎭 Running with Google Profile..."
+  echo "🎭 Running with Google Profile (CDP)..."
   PLAYWRIGHT_CHROMIUM_USE_CDP=true \
   CDP_ENDPOINT=http://localhost:9222 \
   npx playwright test $TEST_PATTERN --reporter=list
 else
-  # Standard Chromium mode
   echo "🎭 Running with attached Chromium..."
   npx playwright test $TEST_PATTERN --reporter=list
 fi
@@ -210,79 +222,37 @@ fi
 
 ### 5. Handle Failures
 
-If tests fail, use `AskUserQuestion` to offer options:
-
-```yaml
-AskUserQuestion:
-  questions:
-    - question: "Some tests failed. What would you like to do?"
-      header: "Next step"
-      options:
-        - label: "View report"
-          description: "Open Playwright HTML report"
-        - label: "Debug failing test"
-          description: "Re-run with --debug flag"
-        - label: "Take screenshot"
-          description: "Capture current state and continue"
-        - label: "Exit"
-          description: "Stop testing"
-```
-
-Then execute based on selection:
+If tests fail, offer options via `AskUserQuestion`:
 - View report: `npx playwright show-report`
 - Debug: `npx playwright test --debug $FAILED_TEST`
-- Screenshot: Use Playwright MCP tools
-- Exit: Stop execution
-
-## Output Format
-
-```
-═══════════════════════════════════════════════════════════════
-  🎭 E2E TESTING
-═══════════════════════════════════════════════════════════════
-
-  Mode: {Chromium | Google Profile}
-  Tests: {pattern or "all"}
-
-  Running...
-
-  ✅ auth.spec.ts (3 tests)
-  ✅ navigation.spec.ts (5 tests)
-  ❌ extension.spec.ts (1/2 failed)
-     └─ "should capture transcript" - timeout
-
-═══════════════════════════════════════════════════════════════
-  Results: 9/10 passed
-
-  ➡️  Next steps:
-     npx playwright show-report  ← View detailed report
-     /testing:e2e extension      ← Re-run failed tests
-
-═══════════════════════════════════════════════════════════════
-```
+- Screenshot: Use `mcp__playwright-cdp__browser_take_screenshot`
 
 ## Quick Reference
 
-| Scenario | Mode | Command |
-|----------|------|---------|
-| Basic UI tests | Chromium | `/testing:e2e` |
-| Auth flow tests | Profile | `/testing:e2e auth --mode=profile` |
-| Extension tests | Profile | `/testing:e2e --extension` |
-| CI/CD | Chromium (headless) | `npx playwright test` |
-| Debug specific | Either | `npx playwright test --debug test.spec.ts` |
+| Scenario | Mode | MCP Tools |
+|----------|------|-----------|
+| Basic UI tests | Chromium | `mcp__playwright__*` |
+| Auth/extension tests | Profile (CDP) | `mcp__playwright-cdp__*` |
+| CI/CD | Chromium (headless) | N/A (use npx playwright) |
+| Manual verification | Profile (CDP) | `mcp__playwright-cdp__*` |
 
 ## Troubleshooting
 
 ### "Cannot connect to Chrome on port 9222"
-- Close ALL Chrome windows first
-- Start Chrome with the exact command shown above
-- Check: `curl http://localhost:9222/json/version`
+1. Close ALL Chrome: `pkill -f chrome`
+2. Copy profile: `cp -r ~/.config/google-chrome/Default /tmp/chrome-debug/`
+3. Start with debugging: `google-chrome --remote-debugging-port=9222 --user-data-dir=/tmp/chrome-debug`
+4. Verify: `curl http://localhost:9222/json/version`
+
+### "about:blank" or no auth in browser
+- You're using `mcp__playwright__*` tools (wrong!)
+- Switch to `mcp__playwright-cdp__*` tools for profile mode
 
 ### Extension not visible
-- Ensure extension is installed in the profile
+- Ensure extension is installed in the copied profile
 - Check `chrome://extensions` - must be enabled
-- Profile mode must use same user-data-dir as normal Chrome
+- May need to copy specific profile (e.g., "Profile 1" not "Default")
 
 ### "No contexts available"
-- Open at least one tab in Chrome before running tests
-- Playwright needs an existing context to attach to
+- Open at least one tab in Chrome before connecting
+- CDP needs an existing context to attach to
