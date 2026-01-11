@@ -8,6 +8,17 @@ Run end-to-end tests with Playwright. Supports two modes:
 - **Attached Chromium**: Standard mode, isolated browser instance
 - **Google Profile**: Uses existing Chrome profile with auth and extensions
 
+## CRITICAL: No Mocks in E2E Tests
+
+**E2E tests must NEVER use mocks.** See `/rules/testing-philosophy.md` for details.
+
+E2E tests verify the complete system works together. Tests should:
+- Call real backend APIs (running locally against staging/test database)
+- Use real authentication flows
+- Interact with real services
+
+If you see mocks in E2E test files, they must be removed and replaced with real integration calls.
+
 ## Usage
 ```
 /testing:e2e [test-pattern]

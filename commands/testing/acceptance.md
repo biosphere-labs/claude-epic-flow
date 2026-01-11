@@ -6,6 +6,18 @@ allowed-tools: Bash, Read, Write, Glob, Grep, mcp__playwright__browser_navigate,
 
 Generate Playwright tests from acceptance criteria, building up regression suite over time.
 
+## CRITICAL: No Mocks
+
+**E2E tests must NEVER use mocks.** See `/rules/testing-philosophy.md`.
+
+Generated tests must:
+- Call real backend APIs (running locally against staging/test database)
+- Use real authentication flows
+- Interact with real services
+- NEVER use jest.mock, mockResolvedValue, or any mocking pattern
+
+Mocks in E2E tests prove nothing - they only verify the mock works, not the actual code.
+
 ## Usage
 ```
 /testing:acceptance <epic-or-feature>

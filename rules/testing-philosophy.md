@@ -2,11 +2,63 @@
 
 Guidelines for writing tests that provide real confidence without false security.
 
-## Core Principle
+## Core Principles
 
 **Prefer integration tests over unit tests with mocks.**
 
 When you mock, you're often testing the mock, not the code. Integration tests verify actual behavior.
+
+## E2E Tests: NEVER Use Mocks
+
+**This is non-negotiable: E2E tests must NEVER contain mocks.**
+
+E2E (end-to-end) tests exist to verify the complete system works together. Adding mocks defeats the entire purpose:
+
+```typescript
+// ❌ WRONG - This is pointless
+jest.mock('../api/userService');
+mockedUserService.getUser.mockResolvedValue({ name: 'Test' });
+// Congratulations, you proved your mock works. The real API could be broken.
+
+// ✅ CORRECT - Real calls to real backend
+const response = await fetch('http://localhost:3000/api/users/1');
+const user = await response.json();
+expect(user.name).toBe('Test User');
+```
+
+### Why Mocks in E2E Are Pointless
+
+1. **You're testing the mock, not the code** - A mock always returns what you told it to. That proves nothing.
+2. **Real bugs hide in real integrations** - Database queries, API serialization, auth flows - mocks skip all of this.
+3. **False confidence** - Tests pass, you deploy, production breaks. The mock lied to you.
+
+### What E2E Tests Should Do
+
+E2E tests should:
+- Start a real local backend (connected to staging/test database)
+- Make real HTTP calls through the UI or API
+- Verify real data flows through real systems
+- Test actual user workflows end-to-end
+
+```typescript
+// Good E2E test - real browser, real backend, real database
+test('user can create and view a project', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  await page.click('[data-testid="new-project"]');
+  await page.fill('[name="title"]', 'My Project');
+  await page.click('[type="submit"]');
+
+  // Verify it was actually created in the real database
+  await expect(page.locator('.project-title')).toHaveText('My Project');
+});
+```
+
+### Value of Local E2E Tests
+
+Even local E2E tests provide significant value:
+- **If tests pass locally but fail on AWS**: You've narrowed down the bug to environment/deployment differences
+- **If tests fail locally**: You catch the bug before it ever reaches CI/CD
+- **Real integration coverage**: You know the code actually works with real services
 
 ## Test Hierarchy
 
@@ -44,6 +96,8 @@ Build up over time as features are completed:
 - Critical user flows
 - Features that broke before
 - Complex multi-step interactions
+
+**Remember: E2E tests NEVER use mocks. See "E2E Tests: NEVER Use Mocks" section above.**
 
 ### 4. Unit Tests with Mocks (Avoid)
 Only when absolutely necessary:
@@ -122,6 +176,22 @@ expect(service.internalMethod).toHaveBeenCalledWith('x');
 mock.getData.mockResolvedValue(expectedData);
 expect(await service.getData()).toEqual(expectedData);
 // This test is worthless
+```
+
+### ❌ Mocks in E2E Tests
+```typescript
+// NEVER do this in E2E tests
+beforeEach(() => {
+  jest.mock('../api/client');
+  mockClient.fetchData.mockResolvedValue(testData);
+});
+
+test('displays data', async ({ page }) => {
+  // This test proves NOTHING - the real API could be completely broken
+  await page.goto('/dashboard');
+  await expect(page.locator('.data')).toBeVisible();
+});
+// The mock bypasses all real integration - database, auth, serialization, network
 ```
 
 ## Building the Regression Suite

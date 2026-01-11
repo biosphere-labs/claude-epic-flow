@@ -206,11 +206,10 @@ mkdir -p workflow/prds/.archived
 mkdir -p workflow/epics/.archived
 mkdir -p workflow/bugfixes/.archived
 mkdir -p workflow/bugfixes/observations
-mkdir -p workflow/brainstorms/.archived
 mkdir -p workflow/context
 
 # Add .gitkeep to empty folders
-for dir in workflow/prds/.archived workflow/epics/.archived workflow/bugfixes/.archived workflow/brainstorms/.archived; do
+for dir in workflow/prds/.archived workflow/epics/.archived workflow/bugfixes/.archived; do
   touch "$dir/.gitkeep"
 done
 ```
@@ -293,7 +292,6 @@ Created:
   ├── prds/
   ├── epics/
   ├── bugfixes/
-  ├── brainstorms/
   └── context/
 
 Next steps:

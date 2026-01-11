@@ -4,7 +4,9 @@ allowed-tools: Bash, Read, Write, LS, Task
 
 # Epic Start
 
-Create worktree, start development servers, and orchestrate task execution.
+Create worktree and orchestrate task execution.
+
+**Note:** Dev servers are NOT started automatically. Start them manually before testing using the project's testing skill (e.g., `/testing:e2e`) which handles server startup appropriately.
 
 ## Usage
 ```
@@ -17,10 +19,10 @@ Create worktree, start development servers, and orchestrate task execution.
 2. **Updates epic status** to `in-progress`
 3. **Syncs to GitHub** (status change reflected)
 4. **Copies dependencies** (node_modules, .env files)
-5. **Generates random ports** (avoids conflicts)
-6. **Starts dev servers** using `dev-worktree.sh`
-7. **Orchestrates task execution** based on decomposed tasks
-8. **Auto-syncs epic** as tasks complete
+5. **Orchestrates task execution** based on decomposed tasks
+6. **Auto-syncs epic** as tasks complete
+
+**Dev servers are NOT started automatically** - start them before testing via the project's testing skill.
 
 ## Preflight Check
 
@@ -122,36 +124,7 @@ if [ "$WORKTREE_NEW" = true ] || [ ! -d "$WORKTREE_PATH/backend/node_modules" ];
 fi
 ```
 
-### 4. Generate Random Ports
-
-```bash
-# Generate random ports in non-privileged range (10000-60000)
-# Probability of collision is very low (~0.002%)
-BACKEND_PORT=$((RANDOM % 50000 + 10000))
-FRONTEND_PORT=$((BACKEND_PORT + 1))
-
-echo "Using ports: Backend=$BACKEND_PORT, Frontend=$FRONTEND_PORT"
-```
-
-### 5. Start Development Servers
-
-```bash
-cd .worktrees/epic/$ARGUMENTS
-
-if [ -f ./dev-worktree.sh ]; then
-  ./dev-worktree.sh $BACKEND_PORT $FRONTEND_PORT &
-  DEV_PID=$!
-else
-  (cd backend && PORT=$BACKEND_PORT pnpm run start:dev) &
-  sleep 3
-  (cd frontend && \
-    VITE_API_GATEWAY_URL="http://localhost:$BACKEND_PORT" \
-    VITE_API_BASE_URL="http://localhost:$BACKEND_PORT" \
-    pnpm run dev -- --port $FRONTEND_PORT) &
-fi
-```
-
-### 6. Analyze Tasks for Parallel Execution
+### 4. Analyze Tasks for Parallel Execution
 
 Read task files and build execution plan:
 
@@ -166,7 +139,7 @@ for task in workflow/epics/$ARGUMENTS/[0-9][0-9][0-9].md; do
 done
 ```
 
-### 7. Execute Tasks (Orchestration)
+### 5. Execute Tasks (Orchestration)
 
 #### Model Selection
 
@@ -233,7 +206,7 @@ Task:
 - **sonnet**: Component creation, service implementation, tests (~$3/M input)
 - **opus**: Complex refactoring, architecture, multi-system integration (~$15/M input)
 
-### 8. Monitor and Coordinate
+### 6. Monitor and Coordinate
 
 As tasks complete:
 
@@ -262,7 +235,7 @@ After status updates:
 - Check if blocked tasks are now ready
 - Launch newly-ready tasks
 
-### 9. Update Execution Status
+### 7. Update Execution Status
 
 Create `workflow/epics/$ARGUMENTS/execution-status.md`:
 
@@ -271,16 +244,9 @@ Create `workflow/epics/$ARGUMENTS/execution-status.md`:
 started: {datetime}
 worktree: .worktrees/epic/$ARGUMENTS
 branch: epic/$ARGUMENTS
-ports:
-  backend: {BACKEND_PORT}
-  frontend: {FRONTEND_PORT}
 ---
 
 # Execution Status
-
-## Development Servers
-- Frontend: http://localhost:{FRONTEND_PORT}
-- Backend:  http://localhost:{BACKEND_PORT}
 
 ## Task Progress
 - [ ] 001 - {name} - {status}
@@ -292,7 +258,7 @@ ports:
 - Agent-2: Task 002 (in_progress)
 ```
 
-### 10. Output
+### 8. Output
 
 ```
 ✅ Epic orchestration started: $ARGUMENTS
@@ -300,10 +266,6 @@ ports:
 Worktree: .worktrees/epic/$ARGUMENTS
 Branch: epic/$ARGUMENTS
 GitHub: Synced ✓
-
-Development servers:
-  Frontend: http://localhost:{FRONTEND_PORT}
-  Backend:  http://localhost:{BACKEND_PORT}
 
 Launching {n} parallel agents:
   - Task 001: {name} ✓ Started
@@ -315,7 +277,7 @@ As tasks complete:
   - GitHub checkboxes updated via epic-sync
 
 When all tasks done:
-  /pm:epic-verify $ARGUMENTS  - Run tests (required)
+  /pm:epic-verify $ARGUMENTS  - Run tests (starts servers, runs E2E)
   /pm:epic-close $ARGUMENTS   - Merge to staging
 ```
 
@@ -330,21 +292,9 @@ sed -i 's/^status: open/status: closed/' workflow/epics/$ARGUMENTS/001.md
 /pm:epic-sync $ARGUMENTS       - Update GitHub checkboxes
 ```
 
-## Stopping the Epic
-
-```bash
-# Kill dev servers
-lsof -ti:{BACKEND_PORT} | xargs kill -9 2>/dev/null
-lsof -ti:{FRONTEND_PORT} | xargs kill -9 2>/dev/null
-
-# Or if started with dev-worktree.sh:
-pkill -f "dev-worktree"
-```
-
 ## Error Handling
 
 - Worktree creation fails: `git worktree prune` then retry
 - Dependencies missing: Run setup step again or `pnpm install` in worktree
-- Port collision (rare): Re-run command for new random ports
 - Agent fails: Report error, continue with other tasks
 - Task blocked: Wait for dependencies, report status

@@ -371,19 +371,9 @@ For each bug (up to 5 concurrent), use Task tool:
    pwd
    ```
 
-4. **Start dev server on worktree ports:**
-   ```bash
-   ./dev-worktree.sh {backend_port} &
-   sleep 10  # Wait for startup
-   ```
+4. **Update checkpoint:** Edit progress.md to set `phase: 3`.
 
-5. **Verify dev server:**
-   ```bash
-   curl -s http://localhost:{frontend_port} > /dev/null && echo "Frontend OK on {frontend_port}"
-   curl -s http://localhost:{backend_port}/health > /dev/null && echo "Backend OK on {backend_port}"
-   ```
-
-6. **Update checkpoint:** Edit progress.md to set `phase: 3`.
+**Note:** Dev servers are NOT started automatically. They will be started before E2E testing in Phase 5.
 
 ### Phase 4: Parallel Bug Fixing
 
@@ -406,10 +396,19 @@ For each bug (up to 5 concurrent), use Task tool:
 
 **CRITICAL: Every bugfix MUST produce a regression test file.**
 
+**CRITICAL: NO MOCKS IN E2E TESTS.** See `/rules/testing-philosophy.md`.
+
+E2E regression tests must:
+- Make real HTTP calls to the local backend (running against staging/test database)
+- Use real authentication flows
+- Interact with real services
+- NEVER use jest.mock, mockResolvedValue, or any mocking
+
 For each fixed bug, write a Playwright test that:
 - Covers the **exact bug scenario** (same steps that triggered the bug)
 - **Passes** with the fix in place
 - Will **catch regressions** if the same bug is reintroduced
+- Uses REAL backend calls (no mocks)
 
 1. **Create regression test file:**
    ```bash
@@ -464,31 +463,50 @@ For each fixed bug, write a Playwright test that:
 
 ### Phase 5: E2E Test Loop
 
-1. **Run E2E tests against worktree server:**
+1. **Start dev servers for testing:**
    ```bash
    cd ../bugfix-$BUGFIX_ID
+
+   # Start dev servers if not already running
+   if [ -f ./dev-worktree.sh ]; then
+     ./dev-worktree.sh {backend_port} &
+     sleep 10  # Wait for startup
+   fi
+
+   # Verify servers are running
+   curl -s http://localhost:{frontend_port} > /dev/null && echo "Frontend OK"
+   curl -s http://localhost:{backend_port}/health > /dev/null && echo "Backend OK"
+   ```
+
+2. **Run E2E tests against worktree server:**
+   ```bash
    BASE_URL=http://localhost:{frontend_port} npx playwright test --reporter=list 2>&1 | tee workflow/bugfixes/$BUGFIX_ID/e2e-run-{iteration}.log
    ```
 
-2. **Analyze failures:**
+3. **Analyze failures:**
    - If all pass → proceed to Phase 6
    - If failures → analyze each
 
-3. **For each failure, determine cause:**
+4. **For each failure, determine cause:**
    - Regression from our fix? → Revert that fix, re-analyze
    - New bug discovered? → Add to bug list
    - Test needs updating? → Update test
 
-4. **Healing loop:**
+5. **Healing loop:**
    Use Task tool for each failure:
 
    > Use Task tool with subagent_type "general-purpose"
    > Prompt: "Working in worktree: ../bugfix-$BUGFIX_ID/. Test failure in {test-file}. Error: {message}. Related bugs fixed: {list}. Determine if this is: regression, new bug, or test issue. Fix appropriately and re-run the test."
 
-5. **Iterate:**
+6. **Iterate:**
    - Maximum 5 iterations
    - Update progress.md with iteration count
    - If max reached, report to user
+
+7. **Stop dev servers when done:**
+   ```bash
+   pkill -f "dev-worktree" 2>/dev/null || true
+   ```
 
 ### Phase 6: Final Verification
 

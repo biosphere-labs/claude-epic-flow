@@ -126,7 +126,7 @@ if [ -z "$github" ] || [ "$github" = "none" ]; then
 fi
 ```
 
-**Creates:** Worktree, starts dev servers
+**Creates:** Worktree (dev servers started later during testing)
 **Next:** `/pm:epic-verify <name>`
 
 ### `/pm:epic-verify <name>`
