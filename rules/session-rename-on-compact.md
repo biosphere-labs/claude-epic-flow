@@ -11,11 +11,18 @@ This rule triggers whenever:
 
 ## Action Required
 
-Immediately after compaction, rename the session using the `/rename` command:
+Immediately after compaction:
 
-```
-/rename <descriptive-name>
-```
+1. **Rename the session** using the `/rename` command:
+   ```
+   /rename <descriptive-name>
+   ```
+
+2. **Update the terminal title** for Tilix using the escape sequence:
+   ```bash
+   echo -ne "\033]0;<session-name> | $(echo $PWD | rev | cut -d'/' -f1-3 | rev)\007"
+   ```
+   This sets the Tilix tab/terminal title to show both the session name and the last 3 path segments (e.g., `dev/workspaces/my-project`), making it easy to distinguish between multiple Claude Code terminals.
 
 ## Naming Guidelines
 
@@ -42,16 +49,22 @@ Derive the session name from:
 - Makes `/resume` and `claude --resume` useful for finding past work
 - Protects against path changes orphaning session history
 - Creates a searchable archive of past work
+- **Tilix terminal titles** help distinguish between multiple Claude Code sessions running in parallel
 
 ## Example
 
 After seeing a compaction summary like:
 > "Discussed implementing user authentication with OAuth2, reviewed existing auth patterns..."
 
-Rename to:
+Rename and update terminal title:
 ```
 /rename oauth2-auth-implementation
 ```
+```bash
+echo -ne "\033]0;oauth2-auth-implementation | $(echo $PWD | rev | cut -d'/' -f1-3 | rev)\007"
+```
+
+This will show something like `oauth2-auth-implementation | dev/workspaces/my-project` in the Tilix tab.
 
 ## Frequency
 
