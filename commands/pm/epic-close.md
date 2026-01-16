@@ -60,11 +60,32 @@ if [ -n "$verified_at" ]; then
 fi
 ```
 
-### 2. Verify All Tasks Complete
+### 2. Verify All Tasks Complete (Skip for One-Shot)
 
-Check all task files in `workflow/epics/$ARGUMENTS/`:
-- Verify all have `status: closed` in frontmatter
-- If any open tasks found: "❌ Cannot close epic. Open tasks remain: {list}"
+```bash
+# Check if this is a one-shot epic
+oneshot=$(grep '^oneshot:' workflow/epics/$ARGUMENTS/epic.md 2>/dev/null | sed 's/oneshot: *//')
+
+if [ "$oneshot" = "true" ]; then
+  echo "✅ One-shot epic - no task files to check"
+else
+  # Check all task files in workflow/epics/$ARGUMENTS/
+  # Verify all have status: closed in frontmatter
+  # If any open tasks found: "❌ Cannot close epic. Open tasks remain: {list}"
+  task_count=$(ls workflow/epics/$ARGUMENTS/[0-9][0-9][0-9].md 2>/dev/null | wc -l)
+  if [ "$task_count" -eq 0 ]; then
+    echo "⚠️ No task files found (not a one-shot epic)"
+    # Ask: Continue anyway?
+  else
+    open_tasks=$(grep -l '^status: open' workflow/epics/$ARGUMENTS/[0-9]*.md 2>/dev/null)
+    if [ -n "$open_tasks" ]; then
+      echo "❌ Cannot close epic. Open tasks remain:"
+      echo "$open_tasks"
+      exit 1
+    fi
+  fi
+fi
+```
 
 ### 3. Check Worktree Status
 

@@ -21,6 +21,12 @@ init → epic-create → epic-decompose → epic-sync → epic-start → epic-ve
 ```
 Use when feature is already well-defined (no PRD needed).
 
+### Feature Workflow (One-Shot)
+```
+init → epic-oneshot → epic-verify → epic-close
+```
+Use for small, well-defined work that doesn't need task decomposition. Skips decompose/sync/start.
+
 ### Bug Workflow
 ```
 init → bugfix (all-in-one)

@@ -20,11 +20,22 @@ test -f .claude/project.yaml || echo "❌ No project config. Run: /pm:init"
 # Verify epic exists
 test -f workflow/epics/$ARGUMENTS/epic.md || echo "❌ Epic not found. Run: /pm:epic-create $ARGUMENTS"
 
-# Count task files
-ls workflow/epics/$ARGUMENTS/*.md 2>/dev/null | grep -v epic.md | wc -l
-```
+# Check if oneshot epic
+oneshot=$(grep '^oneshot:' workflow/epics/$ARGUMENTS/epic.md 2>/dev/null | sed 's/oneshot: *//')
 
-If no tasks found: "❌ No tasks to sync. Run: /pm:epic-decompose $ARGUMENTS"
+if [ "$oneshot" = "true" ]; then
+  echo "✅ One-shot epic (no task files expected)"
+  ONESHOT=true
+else
+  # Count task files
+  task_count=$(ls workflow/epics/$ARGUMENTS/[0-9][0-9][0-9].md 2>/dev/null | wc -l)
+  if [ "$task_count" -eq 0 ]; then
+    echo "❌ No tasks to sync. Run: /pm:epic-decompose $ARGUMENTS"
+    exit 1
+  fi
+  ONESHOT=false
+fi
+```
 
 ## Instructions
 
@@ -69,42 +80,63 @@ sed '1,/^---$/d; 1,/^---$/d' workflow/epics/$ARGUMENTS/epic.md > /tmp/epic-body-
 awk '/^## Tasks Created/,/^## [^T]|^$/{next} {print}' /tmp/epic-body-raw.md > /tmp/epic-intro.md
 ```
 
-### 2. Generate Task Checklist
+### 2. Generate Task Checklist (or Success Criteria for One-Shot)
 
-Build checklist from local task files:
+Build checklist from local task files, or use success criteria for one-shot epics:
 
 ```bash
-cat > /tmp/task-checklist.md << 'EOF'
+if [ "$ONESHOT" = "true" ]; then
+  # For one-shot epics, extract success criteria as the checklist
+  cat > /tmp/task-checklist.md << 'EOF'
+
+## Status
+
+EOF
+
+  # Extract success criteria section
+  awk '/^## Success Criteria/,/^## [^S]|^---/' workflow/epics/$ARGUMENTS/epic.md | \
+    grep -E '^\s*-\s*\[' >> /tmp/task-checklist.md 2>/dev/null || echo "- [ ] Implementation complete" >> /tmp/task-checklist.md
+
+  echo "" >> /tmp/task-checklist.md
+  echo "**Type: One-shot epic (direct implementation)**" >> /tmp/task-checklist.md
+
+  # Set counts for later output
+  total=1
+  closed=0
+else
+  # Standard task checklist
+  cat > /tmp/task-checklist.md << 'EOF'
 
 ## Tasks
 
 EOF
 
-# For each task file, extract name and first line of description
-for task_file in workflow/epics/$ARGUMENTS/[0-9][0-9][0-9].md; do
-  [ -f "$task_file" ] || continue
+  # For each task file, extract name and first line of description
+  for task_file in workflow/epics/$ARGUMENTS/[0-9][0-9][0-9].md; do
+    [ -f "$task_file" ] || continue
 
-  task_num=$(basename "$task_file" .md)
-  task_name=$(grep '^name:' "$task_file" | sed 's/^name: *//')
+    task_num=$(basename "$task_file" .md)
+    task_name=$(grep '^name:' "$task_file" | sed 's/^name: *//')
 
-  # Get first meaningful line from Description section
-  task_desc=$(awk '/^## Description/{getline; while(/^$/) getline; print; exit}' "$task_file" | head -c 80)
+    # Get first meaningful line from Description section
+    task_desc=$(awk '/^## Description/{getline; while(/^$/) getline; print; exit}' "$task_file" | head -c 80)
 
-  # Get status from frontmatter
-  task_status=$(grep '^status:' "$task_file" | sed 's/^status: *//')
+    # Get status from frontmatter
+    task_status=$(grep '^status:' "$task_file" | sed 's/^status: *//')
 
-  if [ "$task_status" = "closed" ]; then
-    echo "- [x] **${task_num}. ${task_name}** - ${task_desc}" >> /tmp/task-checklist.md
-  else
-    echo "- [ ] **${task_num}. ${task_name}** - ${task_desc}" >> /tmp/task-checklist.md
-  fi
-done
+    if [ "$task_status" = "closed" ]; then
+      echo "- [x] **${task_num}. ${task_name}** - ${task_desc}" >> /tmp/task-checklist.md
+    else
+      echo "- [ ] **${task_num}. ${task_name}** - ${task_desc}" >> /tmp/task-checklist.md
+    fi
+  done
 
-# Add task count
-total=$(ls workflow/epics/$ARGUMENTS/[0-9][0-9][0-9].md 2>/dev/null | wc -l)
-closed=$(grep -l '^status: closed' workflow/epics/$ARGUMENTS/[0-9][0-9][0-9].md 2>/dev/null | wc -l)
-echo "" >> /tmp/task-checklist.md
-echo "**Progress: ${closed}/${total} tasks complete**" >> /tmp/task-checklist.md
+  # Add task count
+  total=$(ls workflow/epics/$ARGUMENTS/[0-9][0-9][0-9].md 2>/dev/null | wc -l)
+  closed=$(grep -l '^status: closed' workflow/epics/$ARGUMENTS/[0-9][0-9][0-9].md 2>/dev/null | wc -l)
+  echo "" >> /tmp/task-checklist.md
+  echo "**Progress: ${closed}/${total} tasks complete**" >> /tmp/task-checklist.md
+fi
 ```
 
 ### 3. Calculate Progress and Determine Kanban Column
