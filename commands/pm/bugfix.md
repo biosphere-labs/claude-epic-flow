@@ -662,9 +662,11 @@ After review, continue to Phase 8.
 
      📍 Workflow position: Fixes verified, ready to merge
 
-     ➡️  Next steps:
-        gh pr create ... ← Create PR (recommended)
+     ➡️  Next steps (see /rules/merge-strategy.md):
+        gh pr create ... && gh pr merge --merge --delete-branch ← PR (recommended)
         git checkout staging && git merge bugfix/$BUGFIX_ID ← Direct merge
+
+        ⚠️  Use --merge (NOT --squash) to preserve commit history
 
      🧹 Cleanup (after merge):
         git worktree remove ../bugfix-$BUGFIX_ID

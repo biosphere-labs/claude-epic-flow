@@ -104,6 +104,8 @@ fi
 
 ### 5. Merge Branch to Staging
 
+**Important:** Follow `/rules/merge-strategy.md` - use regular merge (no squash) for epic → staging to preserve granular commit history.
+
 ```bash
 # Return to main repo if in worktree
 cd {main-repo-path}
@@ -112,7 +114,7 @@ cd {main-repo-path}
 git checkout staging
 git pull origin staging
 
-# Merge epic branch
+# Merge epic branch (NO SQUASH - preserves commit history)
 echo "Merging epic/$ARGUMENTS to staging..."
 git merge epic/$ARGUMENTS --no-ff -m "$(cat <<EOF
 Merge epic: $ARGUMENTS
