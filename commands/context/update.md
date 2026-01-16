@@ -16,7 +16,12 @@ This command updates the project context documentation in `workflow/context/` to
 Before proceeding, complete these validation steps.
 Do not bother the user with preflight checks progress ("I'm not going to ..."). Just do them and move on.
 
-### 1. Context Validation
+### 1. Pull Latest Changes
+- Run: `git pull --ff-only 2>/dev/null || true`
+- This ensures version numbers and other CI-updated files are current
+- Use `--ff-only` to avoid merge commits; silent failure is OK if offline or diverged
+
+### 2. Context Validation
 - Run: `ls -la workflow/context/ 2>/dev/null`
 - If directory doesn't exist or is empty:
   - Tell user: "❌ No context to update. Please run /context:create first."
@@ -24,7 +29,7 @@ Do not bother the user with preflight checks progress ("I'm not going to ..."). 
 - Count existing files: `ls -1 workflow/context/*.md 2>/dev/null | wc -l`
 - Report: "📁 Found {count} context files to check for updates"
 
-### 2. Change Detection
+### 3. Change Detection
 
 Gather information about what has changed:
 
@@ -51,7 +56,7 @@ Gather information about what has changed:
 - C/C++: `git diff HEAD~5..HEAD CMakeLists.txt 2>/dev/null`
 - Check if new dependencies were added or versions changed across any build system
 
-### 3. Get Current DateTime
+### 4. Get Current DateTime
 - Run: `date -u +"%Y-%m-%dT%H:%M:%SZ"`
 - Store for updating `last_updated` field in modified files
 
