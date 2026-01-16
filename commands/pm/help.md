@@ -41,7 +41,7 @@ Display:
   /pm:init                   Initialize project (GitHub, board, workflow/)
 
 ═══════════════════════════════════════════════════════════════
-  🎯 FEATURE WORKFLOW
+  🎯 FEATURE WORKFLOW (Full)
 ═══════════════════════════════════════════════════════════════
 
   /pm:prd-new <name>         Design feature (Socratic questioning)
@@ -51,6 +51,16 @@ Display:
   /pm:epic-start <name>      Create worktree + run tasks
   /pm:epic-verify <name>     Run tests + E2E
   /pm:epic-close <name>      Merge + cleanup
+
+═══════════════════════════════════════════════════════════════
+  ⚡ FEATURE WORKFLOW (One-Shot)
+═══════════════════════════════════════════════════════════════
+
+  /pm:epic-oneshot <name>    Create epic + worktree (no decomposition)
+  /pm:epic-verify <name>     Run tests + E2E
+  /pm:epic-close <name>      Merge + cleanup
+
+  💡 Use for small, well-defined work (1-3 files)
 
 ═══════════════════════════════════════════════════════════════
   🐛 BUG WORKFLOW
@@ -84,6 +94,7 @@ Display:
 ═══════════════════════════════════════════════════════════════
 
   💡 Skip prd-new if feature is already well-defined
+  💡 Use epic-oneshot for small changes (skips decompose/sync/start)
   💡 Run /pm:init first to setup project.yaml (once per project)
   💡 epic-verify is REQUIRED before epic-close (verification gate)
 ```
@@ -102,11 +113,16 @@ for epic_dir in workflow/epics/*/; do
 
   status=$(grep "^status:" "$epic_file" 2>/dev/null | head -1 | sed 's/^status: *//')
   github=$(grep "^github:" "$epic_file" 2>/dev/null | head -1 | sed 's/^github: *//')
+  oneshot=$(grep "^oneshot:" "$epic_file" 2>/dev/null | head -1 | sed 's/^oneshot: *//')
   task_count=$(ls "$epic_dir"/[0-9]*.md 2>/dev/null | wc -l)
 
   if [ "$status" = "in-progress" ]; then
-    echo "📌 Epic in progress: $epic_name"
-    [ "$task_count" -eq 0 ] && echo "   ⚠️  No tasks. Run: /pm:epic-decompose $epic_name"
+    if [ "$oneshot" = "true" ]; then
+      echo "📌 One-shot epic in progress: $epic_name"
+    else
+      echo "📌 Epic in progress: $epic_name"
+      [ "$task_count" -eq 0 ] && echo "   ⚠️  No tasks. Run: /pm:epic-decompose $epic_name"
+    fi
     [ -z "$github" ] || [ "$github" = "none" ] && echo "   ⚠️  Not synced. Run: /pm:epic-sync $epic_name"
   fi
 done
